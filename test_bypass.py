@@ -1,0 +1,48 @@
+from playwright.sync_api import sync_playwright
+
+SESSION_FILE = "state.json"
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(
+        headless=True,
+        args=[
+            "--disable-blink-features=AutomationControlled",
+            "--no-sandbox"
+        ],
+        ignore_default_args=["--enable-automation"]
+    )
+    context = browser.new_context(
+        storage_state=SESSION_FILE,
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        viewport={"width": 1280, "height": 850},
+        permissions=["camera", "microphone"],
+        locale="en-US"
+    )
+    context.add_init_script("""
+        Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+        });
+        window.navigator.chrome = {
+            runtime: {},
+            loadTimes: function() {},
+            csi: function() {},
+            app: {}
+        };
+    """)
+    page = context.new_page()
+    page.goto("https://web.snapchat.com", wait_until="networkidle", timeout=30000)
+    page.wait_for_timeout(5000)
+
+    print("Current URL:", page.url)
+    print("Page Title:", page.title())
+    
+    page.screenshot(path="snapchat_bypass_test.png")
+    print("Screenshot saved to snapchat_bypass_test.png")
+
+    # Check if 'Browser not supported' is present
+    if "Browser not supported" in page.content():
+        print("[-] Still showing Browser not supported.")
+    else:
+        print("[+] SUCCESS! Browser supported screen bypassed!")
+
+    browser.close()
