@@ -1,7 +1,7 @@
 import os
 import time
 from playwright.sync_api import sync_playwright
-from config import SESSION_FILE, CHROME_USER_AGENT
+from config import SESSION_FILE
 
 def check_session_exists():
     """Verifies if state.json is present."""
@@ -13,8 +13,8 @@ def check_session_exists():
 
 def upload_story_to_snapchat(media_path, headless=True):
     """
-    Automates uploading an image or video to Snapchat Story via Snapchat Web.
-    Includes multi-layer fallback locators for file input, story target, and submit button.
+    Automates uploading an image or video to Snapchat Story via my.snapchat.com
+    (Snapchat's official Web Story & Spotlight Posting Portal).
     """
     if not check_session_exists():
         return False
@@ -29,105 +29,112 @@ def upload_story_to_snapchat(media_path, headless=True):
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=headless,
-                args=["--disable-blink-features=AutomationControlled"]
+                args=[
+                    "--disable-blink-features=AutomationControlled",
+                    "--no-sandbox"
+                ],
+                ignore_default_args=["--enable-automation"]
             )
             context = browser.new_context(
                 storage_state=SESSION_FILE,
-                user_agent=CHROME_USER_AGENT,
-                viewport={"width": 1280, "height": 900}
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 900},
+                permissions=["camera", "microphone"],
+                locale="en-US"
             )
+            context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+            """)
             page = context.new_page()
 
-            print("[*] Navigating to Snapchat Web...")
-            page.goto("https://web.snapchat.com", wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)
+            # Navigate to Snapchat's official Web Story Uploader
+            print("[*] Navigating to Snapchat Web Story Portal (my.snapchat.com)...")
+            page.goto("https://my.snapchat.com/", wait_until="domcontentloaded", timeout=35000)
+            page.wait_for_timeout(6000)
 
-            # Check if session is expired or redirect to login occurred
+            # Check if redirected to login
             if "login" in page.url or page.locator("input[name='accountIdentifier']").is_visible():
-                print("[!] Error: Snapchat Web session expired. Please re-run 'python save_session.py'.")
+                print("[!] Error: Snapchat session expired or login required.")
+                page.screenshot(path="login_required_debug.png")
                 browser.close()
                 return False
 
-            print("[+] Authenticated session active.")
+            print(f"[+] Loaded uploader portal: {page.url}")
 
-            # Step 1: Upload File (Multi-locator fallback)
-            uploaded = False
+            # Step 1: Upload file via file input
             file_input = page.locator('input[type="file"]')
-            
             if file_input.count() > 0:
-                print("[*] Found file input locator. Attaching media...")
+                print("[*] Found file input locator. Attaching media file...")
                 file_input.first.set_input_files(media_path)
-                uploaded = True
             else:
-                # Fallback: Look for upload button or drag-and-drop trigger
-                upload_btn = page.locator('button[aria-label*="Upload"], svg[aria-label*="Upload"], div[role="button"]:has-text("Upload")')
-                if upload_btn.is_visible(timeout=3000):
-                    print("[*] Clicking upload button fallback...")
+                upload_btn = page.locator('button:has-text("Choose"), button:has-text("Upload"), [role="button"]:has-text("Upload")')
+                if upload_btn.is_visible(timeout=4000):
                     with page.expect_file_chooser() as fc_info:
                         upload_btn.first.click()
                     file_chooser = fc_info.value
                     file_chooser.set_files(media_path)
-                    uploaded = True
+                else:
+                    print("[!] Upload button/input not found on portal.")
+                    page.screenshot(path="no_upload_input_debug.png")
+                    browser.close()
+                    return False
 
-            if not uploaded:
-                print("[-] Could not find file upload target on Snapchat Web.")
-                page.screenshot(path="upload_debug.png")
-                browser.close()
-                return False
+            print("[*] Waiting for file to process and preview to render...")
+            page.wait_for_timeout(5000)
 
-            page.wait_for_timeout(4000)
-
-            # Step 2: Target 'My Story' or 'Public Story' (Multi-locator fallback)
-            story_selected = False
+            # Step 2: Target 'My Story'
             story_selectors = [
                 'text="My Story"',
-                'span:has-text("My Story")',
+                'label:has-text("My Story")',
+                'input[type="checkbox"][value*="story" i]',
                 'div[role="checkbox"]:has-text("Story")',
-                'div[aria-label*="My Story"]',
-                'div[aria-label*="Story"]',
+                'span:has-text("My Story")',
                 'text="Story"'
             ]
 
+            story_checked = False
             for sel in story_selectors:
                 loc = page.locator(sel)
                 if loc.count() > 0 and loc.first.is_visible():
-                    print(f"[*] Selecting story target via selector: {sel}")
+                    print(f"[*] Selecting Story target via: {sel}")
                     loc.first.click()
-                    story_selected = True
+                    story_checked = True
                     break
 
-            page.wait_for_timeout(1500)
+            page.wait_for_timeout(2000)
 
-            # Step 3: Click Send Button (Multi-locator fallback)
-            send_selectors = [
-                'button:has-text("Send")',
-                'button[aria-label*="Send"]',
-                'div[role="button"]:has-text("Send")',
+            # Step 3: Click 'Post' / 'Post to Story'
+            post_selectors = [
                 'button:has-text("Post")',
-                'svg[aria-label*="Send"]'
+                'button:has-text("Post to Story")',
+                'button:has-text("Send")',
+                'button[type="submit"]',
+                'div[role="button"]:has-text("Post")'
             ]
 
-            sent = False
-            for sel in send_selectors:
+            posted = False
+            for sel in post_selectors:
                 btn = page.locator(sel)
                 if btn.count() > 0 and btn.first.is_visible():
-                    print(f"[*] Clicking send button via selector: {sel}")
+                    print(f"[*] Clicking Post button via: {sel}")
                     btn.first.click()
-                    sent = True
+                    posted = True
                     break
 
-            if sent:
-                print("[*] Waiting for upload completion...")
-                page.wait_for_timeout(6000)
-                print("[+] Successfully uploaded to Snapchat Story!")
+            if posted:
+                print("[*] Waiting for post confirmation...")
+                page.wait_for_timeout(8000)
+                print("[+] SUCCESS: Media successfully posted to Snapchat Story!")
                 browser.close()
                 return True
             else:
-                print("[!] Could not locate Send button. Saving debug screenshot...")
-                page.screenshot(path="send_debug.png")
+                print("[!] Could not locate Post button. Saving debug screenshot...")
+                page.screenshot(path="post_button_debug.png")
                 browser.close()
                 return False
 
     except Exception as e:
-        print(f"[!] Exception during Snapchat upload: {e}")
+        print(f"[!] Error during Snapchat Web upload: {e}")
         return False
