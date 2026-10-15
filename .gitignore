@@ -1,0 +1,25 @@
+# Credentials and Authentication
+state.json
+
+# Temporary Media Directories
+downloads/
+processed/
+*.mp4
+*.jpg
+*.jpeg
+*.png
+*.webm
+*.mkv
+
+# Python Environment
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# OS and Debug Artifacts
+.DS_Store
+Thumbs.db
+*_debug.png
