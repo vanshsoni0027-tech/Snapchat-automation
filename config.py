@@ -6,6 +6,7 @@ MEDIA_DIR = os.path.join(BASE_DIR, "downloads")
 PROCESSED_DIR = os.path.join(BASE_DIR, "processed")
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 SESSION_FILE = os.path.join(BASE_DIR, "state.json")
+USER_DATA_DIR = os.getenv("USER_DATA_DIR", os.path.join(BASE_DIR, "snapchat_profile"))
 
 # Ensure required directories exist
 os.makedirs(MEDIA_DIR, exist_ok=True)

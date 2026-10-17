@@ -1,19 +1,22 @@
 import os
 import time
 from playwright.sync_api import sync_playwright
-from config import SESSION_FILE
+from config import SESSION_FILE, USER_DATA_DIR
 
 def check_session_exists():
-    """Verifies if state.json is present."""
-    if not os.path.exists(SESSION_FILE) or os.path.getsize(SESSION_FILE) < 100:
-        print("[!] Error: Valid state.json session file missing.")
-        return False
-    return True
+    """Verifies if persistent profile or state.json is present."""
+    if os.path.exists(USER_DATA_DIR) and os.listdir(USER_DATA_DIR):
+        return True
+    if os.path.exists(SESSION_FILE) and os.path.getsize(SESSION_FILE) > 100:
+        return True
+    print("[!] Error: Neither persistent snapchat_profile nor state.json found.")
+    return False
 
 def upload_story_to_snapchat(media_path, headless=True):
     """
     Automated Snapchat uploader for my.snapchat.com.
     Uploads media to Spotlight and Public Profile effortlessly.
+    Supports persistent browser profile (VPS) or state.json.
     """
     if not check_session_exists():
         return False
@@ -26,26 +29,44 @@ def upload_story_to_snapchat(media_path, headless=True):
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=headless,
-                args=[
-                    "--disable-blink-features=AutomationControlled",
-                    "--no-sandbox"
-                ],
-                ignore_default_args=["--enable-automation"]
-            )
-            context = browser.new_context(
-                storage_state=SESSION_FILE,
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 900},
-                locale="en-US"
-            )
+            browser = None
+            if os.path.exists(USER_DATA_DIR) and os.listdir(USER_DATA_DIR):
+                print(f"[*] Launching Chromium with persistent profile: {USER_DATA_DIR}")
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=USER_DATA_DIR,
+                    headless=headless,
+                    args=[
+                        "--disable-blink-features=AutomationControlled",
+                        "--no-sandbox"
+                    ],
+                    ignore_default_args=["--enable-automation"],
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                    viewport={"width": 1280, "height": 900},
+                    locale="en-US"
+                )
+                page = context.pages[0] if context.pages else context.new_page()
+            else:
+                browser = p.chromium.launch(
+                    headless=headless,
+                    args=[
+                        "--disable-blink-features=AutomationControlled",
+                        "--no-sandbox"
+                    ],
+                    ignore_default_args=["--enable-automation"]
+                )
+                context = browser.new_context(
+                    storage_state=SESSION_FILE,
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                    viewport={"width": 1280, "height": 900},
+                    locale="en-US"
+                )
+                page = context.new_page()
+
             context.add_init_script("""
                 Object.defineProperty(navigator, 'webdriver', {
                     get: () => undefined
                 });
             """)
-            page = context.new_page()
 
             print("[*] Loading Snapchat Creator Portal (my.snapchat.com)...")
             page.goto("https://my.snapchat.com/", wait_until="domcontentloaded", timeout=50000)
@@ -104,13 +125,20 @@ def upload_story_to_snapchat(media_path, headless=True):
                 post_btn.click()
                 page.wait_for_timeout(10000)
                 print("[+] STORY/SPOTLIGHT POSTED TO SNAPCHAT SUCCESSFULLY!")
-                browser.close()
+                if browser:
+                    browser.close()
+                else:
+                    context.close()
                 return True
             else:
                 print("[-] Post button was not enabled.")
                 page.screenshot(path="post_disabled.png")
-                browser.close()
+                if browser:
+                    browser.close()
+                else:
+                    context.close()
                 return False
+
 
     except Exception as e:
         print(f"[!] Upload exception: {e}")
