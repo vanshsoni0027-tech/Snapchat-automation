@@ -10,8 +10,19 @@ echo "=================================================================="
 echo "    INSTALLING 24/7 SNAPCHAT STORY AUTOMATION BOT"
 echo "=================================================================="
 
+# 0. Ensure 2GB Swap for 1GB RAM instances
+if [ $(swapon --show | wc -l) -le 1 ]; then
+    echo "[*] Creating 2GB Swap space for smooth Chromium performance..."
+    sudo fallocate -l 2G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+fi
+
 # 1. Update OS and Install System Packages
 echo "[*] Updating system packages and installing dependencies..."
+
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3 python3-pip python3-venv \
