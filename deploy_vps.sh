@@ -26,8 +26,9 @@ echo "[*] Updating system packages and installing dependencies..."
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3 python3-pip python3-venv \
-    ffmpeg git curl wget \
+    ffmpeg git curl wget cron \
     xvfb x11vnc novnc websockify \
+
     libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
     libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
     libgbm1 libasound2t64 || sudo apt-get install -y libasound2
@@ -70,7 +71,8 @@ sleep 2
 x11vnc -display :99 -nopw -listen localhost -xkb -ncache 10 -forever &
 sleep 2
 
-# Start Web VNC (noVNC) on port 6080
+# Start Web VNC (noVNC) on port 80 (standard HTTP allowed by GCP firewall) and port 6080
+sudo websockify --web /usr/share/novnc 80 localhost:5900 &
 websockify --web /usr/share/novnc 6080 localhost:5900 &
 sleep 2
 
@@ -81,7 +83,9 @@ echo "=================================================================="
 echo "[+] SUCCESS! Virtual Browser is now live in the cloud."
 echo ""
 echo "👉 OPEN THIS URL IN YOUR MOBILE/LAPTOP BROWSER:"
-echo "   http://$PUBLIC_IP:6080/vnc.html?autoconnect=true"
+echo "   http://$PUBLIC_IP/vnc.html?autoconnect=true"
+echo "   (or: http://$PUBLIC_IP:6080/vnc.html?autoconnect=true)"
+
 echo ""
 echo "👉 1. In the browser window that opens, log in to your Snapchat account."
 echo "👉 2. Once you see the upload portal (my.snapchat.com), come back here"
