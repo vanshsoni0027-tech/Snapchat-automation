@@ -60,8 +60,9 @@ echo "🎉 SUCCESS! Your secure cloud link is ready (No firewall needed):"
 echo ""
 if [ -n "$CF_URL" ]; then
     echo "👉 CLICK OR OPEN THIS URL IN YOUR BROWSER / PHONE:"
-    echo "   ${CF_URL}/vnc.html?autoconnect=true"
+    echo "   ${CF_URL}/vnc.html?autoconnect=true&port=443&encrypt=true&path=websockify"
 else
+
     PUBLIC_IP=$(curl -s ifconfig.me || curl -s icanhazip.com || echo "34.30.83.83")
     echo "👉 OPEN THIS URL:"
     echo "   http://${PUBLIC_IP}:6080/vnc.html?autoconnect=true"
