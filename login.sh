@@ -69,6 +69,13 @@ echo "      and press [ENTER] to save your session permanently!"
 echo "=================================================================="
 echo ""
 
+# Ensure window manager is installed and running so windows render properly
+if ! command -v openbox &> /dev/null; then
+    sudo apt-get install -y openbox
+fi
+DISPLAY=:99 openbox &
+sleep 1
+
 # Launch Chromium on display :99 pointing to my.snapchat.com
 DISPLAY=:99 python3 -c "
 import os
@@ -81,7 +88,17 @@ with sync_playwright() as p:
     context = p.chromium.launch_persistent_context(
         user_data_dir=profile_dir,
         headless=False,
-        args=['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+        args=[
+            '--disable-blink-features=AutomationControlled',
+            '--no-sandbox',
+            '--disable-gpu',
+            '--disable-dev-shm-usage',
+            '--disable-software-rasterizer',
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--window-position=0,0',
+            '--window-size=1280,850'
+        ],
         user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         viewport={'width': 1280, 'height': 850}
     )
@@ -90,6 +107,7 @@ with sync_playwright() as p:
     input('>>> PRESS [ENTER] HERE ONCE YOU HAVE LOGGED IN TO SNAPCHAT <<<')
     context.close()
 "
+
 
 # Clean up
 pkill -f Xvfb || true
