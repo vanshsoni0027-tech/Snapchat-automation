@@ -71,27 +71,41 @@ sleep 2
 x11vnc -display :99 -nopw -listen localhost -xkb -ncache 10 -forever &
 sleep 2
 
-# Start Web VNC (noVNC) on port 80 (standard HTTP allowed by GCP firewall) and port 6080
-sudo websockify --web /usr/share/novnc 80 localhost:5900 &
+# Start Web VNC (noVNC) on port 6080
 websockify --web /usr/share/novnc 6080 localhost:5900 &
 sleep 2
 
-PUBLIC_IP=$(curl -s ifconfig.me || curl -s icanhazip.com || echo "YOUR_SERVER_IP")
+# Download Cloudflare tunnel binary if not present (Bypasses all Google Cloud firewalls)
+if [ ! -f ./cloudflared ]; then
+    echo "[*] Setting up instant Cloudflare Tunnel (no firewall required)..."
+    wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O ./cloudflared
+    chmod +x ./cloudflared
+fi
+
+pkill -f cloudflared || true
+./cloudflared tunnel --url http://localhost:6080 > cloudflare.log 2>&1 &
+sleep 6
+
+CF_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' cloudflare.log | head -n 1)
 
 echo ""
 echo "=================================================================="
-echo "[+] SUCCESS! Virtual Browser is now live in the cloud."
+echo "🎉 SUCCESS! Your secure cloud link is ready (No firewall needed):"
 echo ""
-echo "👉 OPEN THIS URL IN YOUR MOBILE/LAPTOP BROWSER:"
-echo "   http://$PUBLIC_IP/vnc.html?autoconnect=true"
-echo "   (or: http://$PUBLIC_IP:6080/vnc.html?autoconnect=true)"
-
+echo "👉 CLICK OR OPEN THIS URL IN YOUR BROWSER / PHONE:"
+if [ -n "$CF_URL" ]; then
+    echo "   ${CF_URL}/vnc.html?autoconnect=true"
+else
+    PUBLIC_IP=$(curl -s ifconfig.me || curl -s icanhazip.com || echo "34.30.83.83")
+    echo "   http://${PUBLIC_IP}:6080/vnc.html?autoconnect=true"
+fi
 echo ""
 echo "👉 1. In the browser window that opens, log in to your Snapchat account."
 echo "👉 2. Once you see the upload portal (my.snapchat.com), come back here"
 echo "      and press [ENTER] to save your session permanently!"
 echo "=================================================================="
 echo ""
+
 
 # Launch real Chromium on display :99 pointing to my.snapchat.com
 DISPLAY=:99 python3 -c "
@@ -117,6 +131,8 @@ with sync_playwright() as p:
 pkill -f Xvfb || true
 pkill -f x11vnc || true
 pkill -f websockify || true
+pkill -f cloudflared || true
+
 
 echo ""
 echo "[+] Snapchat session permanently saved to snapchat_profile!"
