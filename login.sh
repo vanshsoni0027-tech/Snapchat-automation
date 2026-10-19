@@ -19,9 +19,13 @@ pkill -f websockify || true
 pkill -f cloudflared || true
 sleep 1
 
-echo "[*] Starting Virtual Display & Browser Server..."
+# 1. Start Virtual Display
+echo "[*] Starting Virtual Display & Desktop Window Manager..."
 Xvfb :99 -screen 0 1280x900x24 &
 sleep 2
+
+DISPLAY=:99 openbox &
+sleep 1
 
 x11vnc -display :99 -nopw -listen localhost -xkb -ncache 10 -forever &
 sleep 2
@@ -29,7 +33,7 @@ sleep 2
 websockify --web /usr/share/novnc 6080 localhost:5900 &
 sleep 2
 
-# Download Cloudflare tunnel binary if not present (Bypasses Google Cloud firewall completely)
+# 2. Download Cloudflare tunnel binary if not present
 if [ ! -f ./cloudflared ]; then
     echo "[*] Downloading Cloudflare Tunnel (firewall bypass)..."
     wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O ./cloudflared
@@ -42,7 +46,7 @@ pkill -f cloudflared || true
 
 # Wait for tunnel URL
 CF_URL=""
-for i in {1..12}; do
+for i in {1..15}; do
     sleep 1
     CF_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' cloudflare.log | head -n 1 || true)
     if [ -n "$CF_URL" ]; then
@@ -69,16 +73,10 @@ echo "      and press [ENTER] to save your session permanently!"
 echo "=================================================================="
 echo ""
 
-# Ensure window manager is installed and running so windows render properly
-if ! command -v openbox &> /dev/null; then
-    sudo apt-get install -y openbox
-fi
-DISPLAY=:99 openbox &
-sleep 1
-
 # Launch Chromium on display :99 pointing to my.snapchat.com
 DISPLAY=:99 python3 -c "
 import os
+import sys
 from playwright.sync_api import sync_playwright
 
 profile_dir = os.path.abspath('snapchat_profile')
@@ -103,11 +101,14 @@ with sync_playwright() as p:
         viewport={'width': 1280, 'height': 850}
     )
     page = context.pages[0] if context.pages else context.new_page()
-    page.goto('https://my.snapchat.com')
-    input('>>> PRESS [ENTER] HERE ONCE YOU HAVE LOGGED IN TO SNAPCHAT <<<')
+    try:
+        page.goto('https://my.snapchat.com', wait_until='domcontentloaded', timeout=120000)
+    except Exception as e:
+        print('[*] Navigation finished loading:', e)
+    
+    input('\n>>> PRESS [ENTER] HERE ONCE YOU HAVE LOGGED IN TO SNAPCHAT <<<\n')
     context.close()
 "
-
 
 # Clean up
 pkill -f Xvfb || true
