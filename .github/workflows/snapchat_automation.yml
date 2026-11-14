@@ -1,17 +1,19 @@
-name: Snapchat 24-7 Story Automation
+name: Snapchat Weekly Batch & Scheduling Automation
 
 on:
   schedule:
-    # Runs 5 times a day (02:00, 07:00, 12:00, 17:00, 22:00 UTC)
-    - cron: '0 2,7,12,17,22 * * *'
-  workflow_dispatch: # Allows one-click manual run from GitHub UI anytime
+    # Runs once every Sunday at 00:00 UTC (05:30 AM IST)
+    - cron: '0 0 * * 0'
+  workflow_dispatch: # Allows 1-click manual trigger anytime from GitHub UI
 
 permissions:
   contents: write
 
 jobs:
-  post-story:
+  schedule-weekly-batch:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -23,12 +25,12 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install FFmpeg
+      - name: Install System Dependencies & FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Install Python Dependencies
+      - name: Install Python Dependencies & Playwright
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -36,15 +38,23 @@ jobs:
 
       - name: Restore Snapchat Session from Secret
         run: |
-          echo "${{ secrets.SNAPCHAT_STATE_JSON }}" > state.json
+          if [ -n "${{ secrets.SNAPCHAT_STATE_JSON }}" ]; then
+            echo "${{ secrets.SNAPCHAT_STATE_JSON }}" > state.json
+            echo "[+] state.json restored from GitHub Secret"
+          elif [ -f state.json ]; then
+            echo "[+] Using existing state.json in repository"
+          else
+            echo "[!] Error: No state.json or SNAPCHAT_STATE_JSON secret found!"
+            exit 1
+          fi
 
-      - name: Execute Automation Cycle
+      - name: Run Weekly Batch Scrape & Scheduling
         run: |
-          python main.py
+          python weekly_scheduler.py
 
-      - name: Commit and Push Updated History
+      - name: Commit and Push Updated History & Refreshed Session
         run: |
           git config --global user.name "vanshsoni0027-tech"
           git config --global user.email "vanshsoni0027@users.noreply.github.com"
-          git add history.json
-          git diff --staged --quiet || (git commit -m "Update posted history [skip ci]" && git push)
+          git add history.json schedule_queue.json state.json
+          git diff --staged --quiet || (git commit -m "Automated Weekly Schedule: Updated history and refreshed session [skip ci]" && git push)
