@@ -2,12 +2,9 @@ name: Snapchat Weekly Batch & Scheduling Automation
 
 on:
   schedule:
-    # Runs once every Sunday at 00:00 UTC (05:30 AM IST)
+    # Runs automatically every Sunday at 00:00 UTC (05:30 AM IST)
     - cron: '0 0 * * 0'
-  push:
-    branches:
-      - main
-  workflow_dispatch: # Allows 1-click manual trigger anytime from GitHub UI
+  workflow_dispatch: # Allows 1-click manual trigger anytime from GitHub Actions tab
 
 permissions:
   contents: write
@@ -40,19 +37,19 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium --with-deps
 
-      - name: Restore Snapchat Session from Secret
+      - name: Restore Snapchat Session
         run: |
           if [ -n "${{ secrets.SNAPCHAT_STATE_JSON }}" ]; then
             echo "${{ secrets.SNAPCHAT_STATE_JSON }}" > state.json
             echo "[+] state.json restored from GitHub Secret"
           elif [ -f state.json ]; then
             echo "[+] Using existing state.json in repository"
-          else
-            echo "[!] Error: No state.json or SNAPCHAT_STATE_JSON secret found!"
-            exit 1
           fi
 
       - name: Run Weekly Batch Scrape & Scheduling
+        env:
+          SNAPCHAT_USERNAME: ${{ secrets.SNAPCHAT_USERNAME }}
+          SNAPCHAT_PASSWORD: ${{ secrets.SNAPCHAT_PASSWORD }}
         run: |
           python weekly_scheduler.py
 
