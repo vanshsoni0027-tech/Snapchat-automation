@@ -4,6 +4,9 @@ on:
   schedule:
     # Runs once every Sunday at 00:00 UTC (05:30 AM IST)
     - cron: '0 0 * * 0'
+  push:
+    branches:
+      - main
   workflow_dispatch: # Allows 1-click manual trigger anytime from GitHub UI
 
 permissions:
