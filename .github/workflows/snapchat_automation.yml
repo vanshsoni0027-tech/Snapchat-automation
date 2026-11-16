@@ -72,5 +72,5 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add history.json state.json discovered_pool.json || true
+          git add history.json state.json || true
           git diff --staged --quiet || (git commit -m "Auto Post: Updated history and refreshed session [skip ci]" && git push origin main) || echo "[i] No new changes to push"
