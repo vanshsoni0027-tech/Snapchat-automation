@@ -17,6 +17,8 @@ from config import (
 )
 from history_manager import is_already_posted, get_recyclable_items
 
+PINNED_LAST_ACCOUNT = "divine144empath"
+
 def extract_post_id(url):
     """Extracts unique shortcode identifier from Instagram URL."""
     match = re.search(r'/(?:p|reel)/([A-Za-z0-9_-]+)', url)
@@ -33,7 +35,6 @@ def scrape_account_posts(username, max_posts=15):
     # 1. Primary Strategy: Live TLS impersonator
     if HAS_CURL_CFFI:
         try:
-            print(f"[*] Live scraping @{username}...")
             headers = {
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9",
@@ -63,14 +64,12 @@ def scrape_account_posts(username, max_posts=15):
                         break
 
                 if posts:
-                    print(f"[+] @{username}: Found {len(posts)} latest posts.")
                     return posts
         except Exception as e:
             print(f"[!] TLS fetch failed for @{username}: {e}")
 
     # 2. Secondary Strategy: Headless Playwright
     try:
-        print(f"[*] Live fetching @{username} via Playwright...")
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled"])
             context = browser.new_context(user_agent=CHROME_USER_AGENT, viewport={"width": 1280, "height": 800})
@@ -147,22 +146,46 @@ def download_media_file(post):
 def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
     """
     Pure 100% Live Scraper:
-    Runs on-the-fly at execution time.
-    Scrapes the freshest latest posts live across accounts.
+    - Scrapes latest posts live across accounts.
+    - GUARANTEE: The very LAST item in the returned list is ALWAYS from PINNED_LAST_ACCOUNT (@divine144empath).
     """
     print(f"\n=============================================================")
-    print(f"[*] LIVE REAL-TIME SCRAPING: Target {target_count} latest posts across {len(accounts)} accounts")
+    print(f"[*] LIVE SCRAPING: Target {target_count} posts (Pinned Last: @{PINNED_LAST_ACCOUNT})")
     print(f"=============================================================")
 
-    downloaded_items = []
+    # 1. First, secure the PINNED FINAL POST from divine144empath
+    pinned_final_item = None
+    if PINNED_LAST_ACCOUNT in accounts or True:
+        print(f"[*] Fetching guaranteed final post from @{PINNED_LAST_ACCOUNT}...")
+        pinned_posts = scrape_account_posts(PINNED_LAST_ACCOUNT, max_posts=15)
+        unposted_pinned = [
+            p for p in pinned_posts
+            if not is_already_posted(p["id"], allow_repeat_after_days=7) and p["type"] in ALLOWED_MEDIA_TYPES
+        ]
+        # Prefer video, fallback to photo
+        unposted_pinned.sort(key=lambda x: 0 if x["type"] == "video" else 1)
+        for cand in unposted_pinned:
+            raw = download_media_file(cand)
+            if raw and os.path.exists(raw):
+                cand["raw_file"] = raw
+                cand["is_recycled"] = False
+                pinned_final_item = cand
+                print(f"[+] [PINNED LAST] Secured final post: {cand['id']} from @{PINNED_LAST_ACCOUNT}")
+                break
 
-    # 1. 7-Day recycle quota (if available)
-    max_recycle = int(target_count * repeat_ratio)
+    # We need (target_count - 1) other posts if pinned post succeeded
+    needed_other = (target_count - 1) if pinned_final_item else target_count
+    downloaded_other = []
+
+    # 2. 7-Day recycle quota for other posts
+    max_recycle = int(needed_other * repeat_ratio)
     if max_recycle > 0:
         recyclable = get_recyclable_items(max_count=max_recycle, min_days=7)
         if recyclable:
             print(f"[*] 7-Day Repeat Quota: Found {len(recyclable)} eligible past posts.")
             for item in recyclable:
+                if len(downloaded_other) >= max_recycle:
+                    break
                 c_post = {
                     "id": item["id"],
                     "account": "recycle_7d",
@@ -173,48 +196,51 @@ def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
                 if raw and os.path.exists(raw):
                     c_post["raw_file"] = raw
                     c_post["is_recycled"] = True
-                    downloaded_items.append(c_post)
+                    downloaded_other.append(c_post)
                     print(f"[+] [7d-Recycled] Downloaded: {c_post['id']}")
 
-    remaining_needed = target_count - len(downloaded_items)
-    print(f"[*] Live fresh posts needed: {remaining_needed}")
-
-    # 2. Live scrape directly from each account in real-time
+    # 3. Live scrape the other accounts (excluding pinned account to prevent duplicate in earlier slots)
+    other_accounts = [a for a in accounts if a != PINNED_LAST_ACCOUNT]
     account_candidates = {}
-    for acc in accounts:
-        posts = scrape_account_posts(acc, max_posts=12)
-        # Filter only unposted media
-        unposted = [p for p in posts if not is_already_posted(p["id"], allow_repeat_after_days=7) and p["type"] in ALLOWED_MEDIA_TYPES]
-        # Prioritize video reels
+    for acc in other_accounts:
+        posts = scrape_account_posts(acc, max_posts=10)
+        unposted = [
+            p for p in posts
+            if not is_already_posted(p["id"], allow_repeat_after_days=7) and p["type"] in ALLOWED_MEDIA_TYPES
+        ]
         unposted.sort(key=lambda x: 0 if x["type"] == "video" else 1)
         account_candidates[acc] = unposted
 
-    # 3. Interleave candidates across accounts so content is diverse and latest
+    # Interleave candidates across accounts
     ordered_candidates = []
     has_more = True
     idx = 0
     while has_more:
         has_more = False
-        for acc in accounts:
+        for acc in other_accounts:
             pool = account_candidates.get(acc, [])
             if idx < len(pool):
                 ordered_candidates.append(pool[idx])
                 has_more = True
         idx += 1
 
-    print(f"[*] Total latest unposted live candidates: {len(ordered_candidates)}")
-
-    # 4. Download latest posts immediately
+    # Download remaining fresh posts
     for candidate in ordered_candidates:
-        if len(downloaded_items) >= target_count:
+        if len(downloaded_other) >= needed_other:
             break
 
         file_path = download_media_file(candidate)
         if file_path and os.path.exists(file_path):
             candidate["raw_file"] = file_path
             candidate["is_recycled"] = False
-            downloaded_items.append(candidate)
-            print(f"[+] ({len(downloaded_items)}/{target_count}) Live downloaded: {candidate['id']} (@{candidate.get('account')})")
+            downloaded_other.append(candidate)
+            print(f"[+] ({len(downloaded_other)}/{needed_other}) Live downloaded: {candidate['id']} (@{candidate.get('account')})")
 
-    print(f"\n[+] Live Scraping Complete: {len(downloaded_items)}/{target_count} ready to upload.")
-    return downloaded_items
+    # 4. Final Ordered List: [Other posts...] + [PINNED POST FROM divine144empath at the VERY END]
+    final_batch = downloaded_other
+    if pinned_final_item:
+        final_batch.append(pinned_final_item)
+        print(f"[+] Verified: The LAST post in this batch is from @{PINNED_LAST_ACCOUNT} ({pinned_final_item['id']})")
+
+    print(f"\n[+] Batch Ready: Total {len(final_batch)} items ready to upload in strict order.")
+    return final_batch
