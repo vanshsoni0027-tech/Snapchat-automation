@@ -17,7 +17,7 @@ Fully automated pipeline running on **GitHub Actions** (100% Free, Zero PC neede
 
 ## 🎯 Target Instagram Accounts (16 Sources)
 - `@adultfamily`
-- `@comedyslam`
+- `@divine144empath`
 - `@darkhumor.raw`
 - `@abhishekbandrememes`
 - `@scream_for_sinclaire`
