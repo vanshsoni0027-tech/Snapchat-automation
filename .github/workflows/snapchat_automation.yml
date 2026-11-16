@@ -1,18 +1,28 @@
-name: Snapchat Weekly Batch & Scheduling Automation
+name: Snapchat 3x Daily Automated Poster (Spotlight & Story)
 
 on:
   schedule:
-    # Runs automatically every Sunday at 00:00 UTC (05:30 AM IST)
-    - cron: '0 0 * * 0'
-  workflow_dispatch: # Allows 1-click manual trigger anytime from GitHub Actions tab
+    # Run 1: 10:00 AM IST (04:30 AM UTC)
+    - cron: '30 4 * * *'
+    # Run 2: 04:00 PM IST (10:30 AM UTC)
+    - cron: '30 10 * * *'
+    # Run 3: 08:00 PM IST (02:30 PM UTC)
+    - cron: '30 14 * * *'
+
+  workflow_dispatch:
+    inputs:
+      posts_count:
+        description: 'Number of posts to publish in this run'
+        required: false
+        default: '7'
 
 permissions:
   contents: write
 
 jobs:
-  schedule-weekly-batch:
+  auto-post:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 50
 
     steps:
       - name: Checkout Repository
@@ -46,16 +56,21 @@ jobs:
             echo "[+] Using existing state.json in repository"
           fi
 
-      - name: Run Weekly Batch Scrape & Scheduling
+      - name: Run Auto Poster Pipeline
         env:
           SNAPCHAT_USERNAME: ${{ secrets.SNAPCHAT_USERNAME }}
           SNAPCHAT_PASSWORD: ${{ secrets.SNAPCHAT_PASSWORD }}
         run: |
-          python weekly_scheduler.py
+          COUNT="${{ github.event.inputs.posts_count }}"
+          if [ -n "$COUNT" ]; then
+            python weekly_scheduler.py "$COUNT"
+          else
+            python weekly_scheduler.py
+          fi
 
       - name: Commit and Push Updated History & Refreshed Session
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add history.json schedule_queue.json state.json || true
-          git diff --staged --quiet || (git commit -m "Automated Weekly Schedule: Updated history and refreshed session [skip ci]" && git push origin main) || echo "[i] No new commits or push skipped"
+          git add history.json state.json || true
+          git diff --staged --quiet || (git commit -m "Auto Post: Updated history and refreshed session [skip ci]" && git push origin main) || echo "[i] No new changes to push"

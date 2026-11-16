@@ -15,7 +15,7 @@ from config import (
     MEDIA_DIR,
     ALLOWED_MEDIA_TYPES
 )
-from history_manager import is_already_posted
+from history_manager import is_already_posted, get_recyclable_items
 
 def extract_post_id(url):
     """Extracts unique shortcode identifier from Instagram URL."""
@@ -144,30 +144,56 @@ def download_media_file(post):
 
     return None
 
-def batch_download_unposted(accounts, target_count=28):
+def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
     """
-    Downloads unposted reels across multiple accounts until target_count is reached.
-    Cycles through accounts fairly so content is diverse.
+    Downloads media files for a run.
+    Up to repeat_ratio (e.g. 40%) can be recycled from posts >= 7 days old.
+    The remaining is scraped fresh from accounts.
     """
     print(f"\n=============================================================")
-    print(f"[*] BATCH SCRAPING: Target {target_count} posts across {len(accounts)} accounts")
+    print(f"[*] BATCH CONTENT GATHERING: Target {target_count} posts")
     print(f"=============================================================")
 
-    # 1. Collect candidates per account
+    downloaded_items = []
+
+    # 1. Check for 7-day-old recyclable content (up to 40%)
+    max_recycle = int(target_count * repeat_ratio)
+    if max_recycle > 0:
+        recyclable = get_recyclable_items(max_count=max_recycle, min_days=7)
+        if recyclable:
+            print(f"[*] Found {len(recyclable)} items eligible for 7-day recycle (40% quota).")
+            for item in recyclable:
+                c_post = {
+                    "id": item["id"],
+                    "account": "recycle_7d",
+                    "type": item.get("type", "video"),
+                    "url": item["source_url"]
+                }
+                raw = download_media_file(c_post)
+                if raw and os.path.exists(raw):
+                    c_post["raw_file"] = raw
+                    c_post["is_recycled"] = True
+                    downloaded_items.append(c_post)
+                    print(f"[+] [Recycled] Downloaded: {c_post['id']}")
+
+    remaining_needed = target_count - len(downloaded_items)
+    print(f"[*] Fresh posts needed: {remaining_needed} from {len(accounts)} accounts")
+
+    # 2. Collect candidates per account
     account_candidates = {}
     for acc in accounts:
-        posts = scrape_account_posts(acc, max_posts=20)
-        unposted = [p for p in posts if not is_already_posted(p["id"]) and p["type"] in ALLOWED_MEDIA_TYPES]
+        posts = scrape_account_posts(acc, max_posts=15)
+        unposted = [p for p in posts if not is_already_posted(p["id"], allow_repeat_after_days=7) and p["type"] in ALLOWED_MEDIA_TYPES]
         # Sort video reels first
         unposted.sort(key=lambda x: 0 if x["type"] == "video" else 1)
         account_candidates[acc] = unposted
         print(f"  - @{acc}: {len(unposted)} unposted candidates available")
 
-    # 2. Interleave candidates across accounts for diversity
+    # 3. Interleave candidates across accounts for variety
     ordered_candidates = []
     has_more = True
     idx = 0
-    while has_more:
+    while has_more and len(ordered_candidates) < (remaining_needed * 3):
         has_more = False
         for acc in accounts:
             pool = account_candidates.get(acc, [])
@@ -176,10 +202,7 @@ def batch_download_unposted(accounts, target_count=28):
                 has_more = True
         idx += 1
 
-    print(f"\n[*] Total pooled unposted candidates: {len(ordered_candidates)}")
-
-    # 3. Download until target_count is reached
-    downloaded_items = []
+    # 4. Download fresh candidates until target is fulfilled
     for candidate in ordered_candidates:
         if len(downloaded_items) >= target_count:
             break
@@ -187,10 +210,9 @@ def batch_download_unposted(accounts, target_count=28):
         file_path = download_media_file(candidate)
         if file_path and os.path.exists(file_path):
             candidate["raw_file"] = file_path
+            candidate["is_recycled"] = False
             downloaded_items.append(candidate)
-            print(f"[+] ({len(downloaded_items)}/{target_count}) Successfully downloaded: {candidate['id']}")
-        else:
-            print(f"[!] Skipped failed candidate: {candidate['id']}")
+            print(f"[+] ({len(downloaded_items)}/{target_count}) Downloaded fresh: {candidate['id']}")
 
-    print(f"\n[+] Batch Download Complete: {len(downloaded_items)}/{target_count} items ready.")
+    print(f"\n[+] Total items gathered: {len(downloaded_items)}/{target_count}")
     return downloaded_items

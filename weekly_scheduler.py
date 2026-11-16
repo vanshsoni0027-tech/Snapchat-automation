@@ -8,12 +8,10 @@ from playwright.sync_api import sync_playwright
 from config import (
     ACCOUNTS_FILE,
     DEFAULT_TARGET_ACCOUNTS,
-    TOTAL_POSTS_PER_WEEK,
     SESSION_FILE
 )
 from scraper import batch_download_unposted
 from media_processor import adapt_media_for_snapchat
-from schedule_planner import generate_weekly_schedule_slots, save_schedule_queue
 from snapchat_uploader import check_session_exists, open_uploader_page, schedule_single_snap
 from history_manager import mark_as_posted
 
@@ -29,46 +27,69 @@ def load_accounts():
             pass
     return DEFAULT_TARGET_ACCOUNTS
 
-def run_weekly_pipeline():
+def get_target_count_for_current_run():
     """
-    Main Weekly Orchestrator:
-    1. Loads target accounts list.
-    2. Batch-downloads 28 unposted reels/memes.
-    3. Formats all 28 into 9:16 vertical videos with blurred backdrop.
-    4. Generates scheduled slots for the next 7 days (4 posts/day).
-    5. Automates scheduling them into Snapchat Creator Portal.
+    Determines post count based on IST hour:
+    - 10:00 AM IST run (~04:30 UTC): 7 posts
+    - 04:00 PM IST run (~10:30 UTC): 7 posts
+    - 08:00 PM IST run (~14:30 UTC): 6 posts
+    Total: 20 posts per day!
+    Can also be overridden by CLI arg: python weekly_scheduler.py 7
     """
+    if len(sys.argv) > 1:
+        try:
+            return int(sys.argv[1])
+        except ValueError:
+            pass
+
+    # Check UTC hour to adjust (04 -> 7, 10 -> 7, 14 -> 6)
+    utc_hour = datetime.utcnow().hour
+    if 13 <= utc_hour <= 17:
+        return 6 # Evening slot (8:00 PM IST)
+    return 7 # Morning (10:00 AM IST) or Afternoon (4:00 PM IST)
+
+def run_pipeline():
+    """
+    Automated Daily Poster:
+    1. Loads target Instagram accounts.
+    2. Downloads posts (allowing 40% repeat from posts >= 7 days old).
+    3. Formats to 9:16 vertical (1080x1920) with blurred background.
+    4. Auto-posts to Spotlight and Public Story ('BC Nation').
+    5. Saves history and refreshes session state.
+    """
+    target_count = get_target_count_for_current_run()
+
     print("\n" + "=" * 70)
-    print("🚀 SNAPCHAT 7-DAY BATCH & SCHEDULING PIPELINE")
+    print(" SNAPCHAT AUTOMATED CLOUD POSTER")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Target Posts This Run: {target_count} (Daily Goal: 20 posts across 3 runs)")
     print("=" * 70)
 
     if not check_session_exists():
-        print("[!] Snapchat session missing. Please run START_LOGIN.bat once to save session.")
-        return False
+        print("[!] Warning: state.json session file not found or empty.")
 
     accounts = load_accounts()
-    print(f"[*] Target Accounts ({len(accounts)}): {', '.join(accounts)}")
-    print(f"[*] Target Schedule: {TOTAL_POSTS_PER_WEEK} posts across 7 days")
+    print(f"[*] Active Target Accounts ({len(accounts)}): {', '.join(accounts[:6])}... (+{len(accounts)-6} more)")
 
-    # 1. Batch Scraping & Downloading
-    items = batch_download_unposted(accounts, target_count=TOTAL_POSTS_PER_WEEK)
+    # 1. Gather Media (40% recycle if >7d old, 60% fresh)
+    items = batch_download_unposted(accounts, target_count=target_count, repeat_ratio=0.4)
     if not items:
-        print("[-] No new unposted media could be downloaded. Exiting.")
+        print("[-] No media items could be gathered for this run. Exiting.")
         return False
 
     # 2. Batch Media Processing (9:16 Vertical)
-    print(f"\n[*] Formatting {len(items)} media files into 9:16 vertical format...")
+    print(f"\n[*] Formatting {len(items)} media files into 9:16 vertical canvas...")
     processed_queue = []
     for idx, item in enumerate(items, 1):
         try:
-            print(f"[{idx}/{len(items)}] Processing {item['id']} ({item['type']})...")
+            label = "Recycled" if item.get("is_recycled") else "Fresh"
+            print(f"[{idx}/{len(items)}] [{label}] Processing {item['id']} ({item['type']})...")
             processed_file = adapt_media_for_snapchat(item["raw_file"], item)
             if processed_file and os.path.exists(processed_file):
                 item["processed_file"] = processed_file
                 processed_queue.append(item)
             else:
-                print(f"[!] Failed to process {item['id']}")
+                print(f"[!] Processing failed for {item['id']}")
         except Exception as e:
             print(f"[!] Processing exception for {item['id']}: {e}")
 
@@ -76,42 +97,24 @@ def run_weekly_pipeline():
         print("[-] No media files were successfully processed.")
         return False
 
-    # 3. Generate Weekly Schedule Slots
-    slots = generate_weekly_schedule_slots()
-    print(f"\n[*] Generated {len(slots)} schedule slots for the upcoming week:")
-    for i, s in enumerate(slots[:4]):
-        print(f"   Slot {i+1}: {s.strftime('%A, %d %b %Y @ %I:%M %p')}")
-    print("   ...")
-
-    for i, item in enumerate(processed_queue):
-        if i < len(slots):
-            item["scheduled_for"] = slots[i].strftime("%Y-%m-%d %H:%M")
-            item["slot_datetime"] = slots[i]
-        else:
-            item["scheduled_for"] = None
-
-    save_schedule_queue(processed_queue)
-
-    # 4. Upload & Schedule on Snapchat
-    print(f"\n[*] Starting Snapchat Automated Scheduling ({len(processed_queue)} posts)...")
+    # 3. Post to Snapchat Spotlight & Public Story
+    print(f"\n[*] Uploading {len(processed_queue)} posts to Snapchat...")
     success_count = 0
 
     with sync_playwright() as p:
         browser, context, page = open_uploader_page(p, headless=True)
         try:
             for idx, item in enumerate(processed_queue, 1):
-                slot_info = item.get("scheduled_for", "Immediate")
-                print(f"\n--- [{idx}/{len(processed_queue)}] Scheduling {item['id']} for {slot_info} ---")
-
-                success = schedule_single_snap(page, item["processed_file"], item.get("slot_datetime"))
+                print(f"\n--- [{idx}/{len(processed_queue)}] Uploading {item['id']} ---")
+                success = schedule_single_snap(page, item["processed_file"])
                 if success:
                     mark_as_posted(item["id"], item["type"], item["url"], item["processed_file"])
                     success_count += 1
-                    print(f"[+] Post {item['id']} successfully queued on Snapchat!")
+                    print(f"[+] Post {item['id']} successfully published on Snapchat!")
                 else:
-                    print(f"[-] Could not queue {item['id']}.")
+                    print(f"[-] Could not publish {item['id']}.")
 
-                # Clean up local files after scheduling
+                # Clean up local temp files
                 try:
                     if os.path.exists(item["raw_file"]):
                         os.remove(item["raw_file"])
@@ -120,9 +123,9 @@ def run_weekly_pipeline():
                 except Exception:
                     pass
 
-                time.sleep(4)
+                time.sleep(5)
 
-            # Auto-refresh session state after batch
+            # Auto-save refreshed session state
             try:
                 context.storage_state(path=SESSION_FILE)
                 print(f"[+] Session refreshed and saved to {SESSION_FILE}")
@@ -136,10 +139,9 @@ def run_weekly_pipeline():
                 context.close()
 
     print("\n" + "=" * 70)
-    print(f"🎉 WEEKLY BATCH RUN COMPLETE: {success_count}/{len(processed_queue)} posts scheduled!")
-    print("Snapchat will now automatically publish them throughout the week!")
+    print(f" RUN COMPLETE: {success_count}/{len(processed_queue)} posts published!")
     print("=" * 70)
     return True
 
 if __name__ == "__main__":
-    run_weekly_pipeline()
+    run_pipeline()
