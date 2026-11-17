@@ -2,11 +2,13 @@ name: Snapchat 3x Daily Automated Poster (Spotlight & Story)
 
 on:
   schedule:
-    # Runs 3 times every day:
-    # 04:35 UTC (10:05 AM IST)
-    # 10:35 UTC (04:05 PM IST)
-    # 14:35 UTC (08:05 PM IST)
-    - cron: '35 4,10,14 * * *'
+    # 3 Daily Scheduled Slots (Offset by 15 mins to absorb GitHub queue delay):
+    # Slot 1: ~10:00 AM IST (04:15 UTC) -> 7 posts
+    - cron: '15 4 * * *'
+    # Slot 2: ~04:00 PM IST (10:15 UTC) -> 7 posts
+    - cron: '15 10 * * *'
+    # Slot 3: ~08:00 PM IST (14:15 UTC) -> 6 posts
+    - cron: '15 14 * * *'
 
   workflow_dispatch:
     inputs:
@@ -14,6 +16,9 @@ on:
         description: 'Number of posts to publish in this run'
         required: false
         default: '7'
+
+  repository_dispatch:
+    types: [auto_post]
 
 permissions:
   contents: write
