@@ -98,70 +98,34 @@ def process_video_reel(input_path, output_path):
 
     return input_path
 
-def process_photo_as_video(input_path, output_path, duration=5):
+def process_photo_meme(input_path, output_path):
     """
-    Converts a photo/meme into a 5-second 9:16 vertical video (1080x1920) with blurred background.
-    Preserves full quality and original aspect ratio of the photo in the center.
-    This guarantees Snapchat accepts it for BOTH Spotlight and Public Story
-    (since Snapchat rejects raw JPEGs on Spotlight with 'Spotlight posting not available for images').
+    Optimizes photo/meme directly as an original high-quality JPEG without converting to video.
+    Preserves natural original aspect ratio (no forced blur/crop).
     """
-    print(f"[*] Converting photo to 5s 9:16 video for Spotlight & Story: {input_path}")
-    filter_complex = (
-        "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=25:5[bg];"
-        "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];"
-        "[bg][fg]overlay=(W-w)/2:(H-h)/2[outv]"
-    )
-    cmd = [
-        "ffmpeg", "-y", "-loop", "1", "-i", input_path,
-        "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
-        "-t", str(duration),
-        "-filter_complex", filter_complex,
-        "-map", "[outv]", "-map", "1:a",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "22",
-        "-c:a", "aac", "-b:a", "128k",
-        "-pix_fmt", "yuv420p",
-        output_path
-    ]
+    print(f"[*] Optimizing original photo: {input_path}")
     try:
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if res.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 1024:
-            print(f"[+] Photo successfully converted to video: {output_path}")
+        with Image.open(input_path) as img:
+            img = img.convert("RGB")
+            img.save(output_path, "JPEG", quality=95)
+            print(f"[+] Photo optimized successfully: {output_path}")
             return output_path
-        else:
-            print(f"[!] FFmpeg photo-to-video error: {res.stderr[:200]}")
     except Exception as e:
-        print(f"[!] Photo conversion exception: {e}")
-
-    # Fallback to black pad
-    cmd_fallback = [
-        "ffmpeg", "-y", "-loop", "1", "-i", input_path,
-        "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
-        "-t", str(duration),
-        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-        "-pix_fmt", "yuv420p",
-        output_path
-    ]
-    try:
-        res = subprocess.run(cmd_fallback, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if res.returncode == 0 and os.path.exists(output_path):
-            return output_path
-    except Exception:
-        pass
-
-    return input_path
+        print(f"[!] Photo processing fallback: {e}")
+        return input_path
 
 def adapt_media_for_snapchat(raw_path, post_info):
     """
-    Master adapter: Converts both video reels and photos into high quality 9:16 vertical MP4 videos.
-    Photos are rendered as 5-second vertical clips so Snapchat accepts them on BOTH Spotlight and Public Story.
+    Master adapter dispatching video or photo processing.
+    - Videos are formatted into 9:16 vertical MP4.
+    - Photos are preserved as original high-res JPEG photos.
     """
     post_id = post_info["id"]
     media_type = post_info.get("type", "video")
-    output_file = os.path.join(PROCESSED_DIR, f"{post_id}_story.mp4")
 
     if media_type == "video":
+        output_file = os.path.join(PROCESSED_DIR, f"{post_id}_story.mp4")
         return process_video_reel(raw_path, output_file)
     else:
-        return process_photo_as_video(raw_path, output_file)
+        output_file = os.path.join(PROCESSED_DIR, f"{post_id}_story.jpg")
+        return process_photo_meme(raw_path, output_file)

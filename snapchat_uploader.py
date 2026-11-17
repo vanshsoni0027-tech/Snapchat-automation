@@ -17,30 +17,43 @@ def check_session_exists():
 
 def ensure_logged_in(page, context):
     """Checks if logged in; if at login screen, logs in automatically."""
+    for _ in range(8):
+        current_url = page.url.lower()
+        if "accounts.snapchat.com" in current_url or "login" in current_url:
+            break
+        if page.locator('input[type="file"]').count() > 0:
+            return
+        page.wait_for_timeout(1000)
+
     current_url = page.url.lower()
     if "accounts.snapchat.com" in current_url or "login" in current_url:
         print("[*] Login page detected. Performing automated authentication...")
-        user_input = page.locator('input#accountIdentifier, input[name="accountIdentifier"], input[autocomplete="username"]').first
-        if user_input.is_visible():
+        try:
+            user_input = page.locator('input#accountIdentifier, input[name="accountIdentifier"], input[autocomplete="username"]').first
+            user_input.wait_for(state="visible", timeout=15000)
             user_input.fill(SNAPCHAT_USERNAME)
+            page.wait_for_timeout(500)
             next_btn = page.locator('button:has-text("Next"), button[type="submit"]').first
             if next_btn.is_visible():
                 next_btn.click()
                 page.wait_for_timeout(3000)
 
-        pw_input = page.locator('input#password, input[name="password"], input[type="password"]').first
-        if pw_input.is_visible():
+            pw_input = page.locator('input#password, input[name="password"], input[type="password"]').first
+            pw_input.wait_for(state="visible", timeout=15000)
             pw_input.fill(SNAPCHAT_PASSWORD)
+            page.wait_for_timeout(500)
             sub_btn = page.locator('button:has-text("Log In"), button:has-text("Next"), button[type="submit"]').first
             if sub_btn.is_visible():
                 sub_btn.click()
-                page.wait_for_timeout(8000)
+                page.wait_for_timeout(10000)
 
-        if os.path.exists(SESSION_FILE):
-            try:
-                context.storage_state(path=SESSION_FILE)
-            except Exception:
-                pass
+            if os.path.exists(SESSION_FILE):
+                try:
+                    context.storage_state(path=SESSION_FILE)
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[!] Login automation exception: {e}")
 
 def open_uploader_page(playwright_instance, headless=True):
     """Launches browser with saved session."""
@@ -61,8 +74,9 @@ def open_uploader_page(playwright_instance, headless=True):
 
 def schedule_single_snap(page, media_path, scheduled_dt=None, caption="🔥 #reels #viral #spotlight"):
     """
-    Automates uploading and scheduling a single piece of media on my.snapchat.com.
-    Posts to both Spotlight and Public Story ('BC Nation').
+    Automates uploading a single piece of media on my.snapchat.com.
+    - If photo (.jpg, .jpeg, .png): posts ONLY to Public Story ('BC Nation'). Never touches Spotlight.
+    - If video (.mp4): posts to BOTH Spotlight and Public Story ('BC Nation').
     """
     print(f"[*] Navigating to Creator Portal (my.snapchat.com)...")
     page.goto("https://my.snapchat.com/", wait_until="domcontentloaded", timeout=60000)
@@ -80,20 +94,31 @@ def schedule_single_snap(page, media_path, scheduled_dt=None, caption="🔥 #ree
     # 2. Wait for media rendering preview
     page.wait_for_timeout(6000)
 
-    # 3. Destination: Check Spotlight and Public Story
-    spotlight_opt = page.locator('text="Post to Spotlight"')
-    if spotlight_opt.count() > 0 and spotlight_opt.first.is_visible():
-        print("[*] Selecting Spotlight destination...")
-        spotlight_opt.first.click(force=True)
-        page.wait_for_timeout(1000)
+    # Determine media type
+    is_photo = media_path.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))
 
-    story_box = page.locator('text="Post to Public Story"')
-    if story_box.count() > 0 and story_box.first.is_visible():
-        print("[*] Selecting Public Story destination...")
-        story_box.first.click(force=True)
-        page.wait_for_timeout(1000)
+    # 3. Destination:
+    if is_photo:
+        print("[*] Media is PHOTO: Selecting ONLY 'Post to Public Story' (leaving Spotlight untouched)...")
+        story_box = page.locator('text="Post to Public Story"')
+        if story_box.count() > 0 and story_box.first.is_visible():
+            story_box.first.click(force=True)
+            page.wait_for_timeout(1000)
+    else:
+        print("[*] Media is VIDEO: Selecting BOTH Spotlight and Public Story...")
+        spotlight_opt = page.locator('text="Post to Spotlight"')
+        if spotlight_opt.count() > 0 and spotlight_opt.first.is_visible():
+            print("[*] Selecting Spotlight destination...")
+            spotlight_opt.first.click(force=True)
+            page.wait_for_timeout(1000)
 
-    # 4. Select BC Nation in ALL visible dropdowns (whether 1 for photo or 2 for video)
+        story_box = page.locator('text="Post to Public Story"')
+        if story_box.count() > 0 and story_box.first.is_visible():
+            print("[*] Selecting Public Story destination...")
+            story_box.first.click(force=True)
+            page.wait_for_timeout(1000)
+
+    # 4. Select BC Nation in ALL visible profile dropdowns
     inputs = page.locator('.sds-dropdown-input-selection-search-input').all()
     for idx, inp in enumerate(inputs):
         if inp.is_visible():
@@ -105,7 +130,7 @@ def schedule_single_snap(page, media_path, scheduled_dt=None, caption="🔥 #ree
             page.keyboard.press("Enter")
             page.wait_for_timeout(800)
 
-    # 5. Fill caption/description if textarea exists
+    # 5. Fill caption/description if textarea exists (mainly for video)
     try:
         desc = page.locator('textarea').first
         if desc.is_visible():
