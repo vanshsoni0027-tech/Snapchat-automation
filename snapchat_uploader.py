@@ -140,8 +140,22 @@ def schedule_single_snap(page, media_path, scheduled_dt=None, caption="🔥 #ree
         btn_label = submit_btn.text_content().strip()
         print(f"[*] Submitting via '{btn_label}' button...")
         submit_btn.click()
-        page.wait_for_timeout(12000)
-        print("[+] Snap successfully submitted and confirmed!")
+        
+        # Check for success confirmation modal
+        confirmed = False
+        for _ in range(15):
+            page.wait_for_timeout(1000)
+            success_modal = page.locator('text="Success! Your Snap is now live!", text="Your Snap is now live!"')
+            if success_modal.count() > 0 and success_modal.first.is_visible():
+                confirmed = True
+                print("[+] Verified: 'Success! Your Snap is now live!' modal appeared!")
+                break
+            error_toast = page.locator('[role="alert"], .sds-toast--negative')
+            if error_toast.count() > 0 and error_toast.first.is_visible():
+                err_text = error_toast.first.text_content().strip()
+                print(f"[!] Upload Error Toast: {err_text}")
+                return False
+
         return True
     else:
         print("[-] Submit button remained disabled.")

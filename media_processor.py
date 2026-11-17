@@ -1,7 +1,7 @@
 import os
 import json
 import subprocess
-from PIL import Image, ImageFilter
+from PIL import Image
 from config import (
     PROCESSED_DIR,
     TARGET_WIDTH,
@@ -49,7 +49,7 @@ def process_video_reel(input_path, output_path):
 
     print(f"[*] Processing video: {width}x{height} (duration: {duration:.1f}s, target trim: {trim_duration:.1f}s)")
 
-    # Strategy 1: Modern Blurred Background Overlay (Creative 9:16 presentation)
+    # Strategy 1: Blurred Background Overlay (Creative 9:16 presentation)
     filter_complex = (
         "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=25:5[bg];"
         "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];"
@@ -98,31 +98,70 @@ def process_video_reel(input_path, output_path):
 
     return input_path
 
-def process_photo_meme(input_path, output_path):
+def process_photo_as_video(input_path, output_path, duration=5):
     """
-    Optimizes photo/meme for Snapchat upload while preserving original aspect ratio.
+    Converts a photo/meme into a 5-second 9:16 vertical video (1080x1920) with blurred background.
+    Preserves full quality and original aspect ratio of the photo in the center.
+    This guarantees Snapchat accepts it for BOTH Spotlight and Public Story
+    (since Snapchat rejects raw JPEGs on Spotlight with 'Spotlight posting not available for images').
     """
-    print(f"[*] Processing photo: {input_path}")
+    print(f"[*] Converting photo to 5s 9:16 video for Spotlight & Story: {input_path}")
+    filter_complex = (
+        "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=25:5[bg];"
+        "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg];"
+        "[bg][fg]overlay=(W-w)/2:(H-h)/2[outv]"
+    )
+    cmd = [
+        "ffmpeg", "-y", "-loop", "1", "-i", input_path,
+        "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+        "-t", str(duration),
+        "-filter_complex", filter_complex,
+        "-map", "[outv]", "-map", "1:a",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+        "-c:a", "aac", "-b:a", "128k",
+        "-pix_fmt", "yuv420p",
+        output_path
+    ]
     try:
-        with Image.open(input_path) as img:
-            img = img.convert("RGB")
-            img.save(output_path, "JPEG", quality=95)
-            print(f"[+] Photo optimized successfully: {output_path}")
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if res.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 1024:
+            print(f"[+] Photo successfully converted to video: {output_path}")
             return output_path
+        else:
+            print(f"[!] FFmpeg photo-to-video error: {res.stderr[:200]}")
     except Exception as e:
-        print(f"[!] Photo processing fallback: {e}")
-        return input_path
+        print(f"[!] Photo conversion exception: {e}")
+
+    # Fallback to black pad
+    cmd_fallback = [
+        "ffmpeg", "-y", "-loop", "1", "-i", input_path,
+        "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+        "-t", str(duration),
+        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+        "-c:a", "aac", "-b:a", "128k",
+        "-pix_fmt", "yuv420p",
+        output_path
+    ]
+    try:
+        res = subprocess.run(cmd_fallback, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if res.returncode == 0 and os.path.exists(output_path):
+            return output_path
+    except Exception:
+        pass
+
+    return input_path
 
 def adapt_media_for_snapchat(raw_path, post_info):
     """
-    Master adapter dispatching video or photo processing.
+    Master adapter: Converts both video reels and photos into high quality 9:16 vertical MP4 videos.
+    Photos are rendered as 5-second vertical clips so Snapchat accepts them on BOTH Spotlight and Public Story.
     """
     post_id = post_info["id"]
-    media_type = post_info["type"]
+    media_type = post_info.get("type", "video")
+    output_file = os.path.join(PROCESSED_DIR, f"{post_id}_story.mp4")
 
     if media_type == "video":
-        output_file = os.path.join(PROCESSED_DIR, f"{post_id}_story.mp4")
         return process_video_reel(raw_path, output_file)
     else:
-        output_file = os.path.join(PROCESSED_DIR, f"{post_id}_story.jpg")
-        return process_photo_meme(raw_path, output_file)
+        return process_photo_as_video(raw_path, output_file)

@@ -1,6 +1,5 @@
 {
   "posted_ids": [
-    "DGOQJk9SKL4",
     "Dft1gqDSyjm",
     "DfnaLWYxefy",
     "DfzC7M7yTi9",
@@ -29,16 +28,9 @@
     "DMDUMG2yPNQ",
     "Dekcr-kT_s2",
     "DeNw9c2Tz2i",
-    "DfAXnEvGlTC"
+    "Df0fWgej0pA"
   ],
   "items": [
-    {
-      "id": "DGOQJk9SKL4",
-      "type": "photo",
-      "source_url": "https://www.instagram.com/bakchod_nation/p/DGOQJk9SKL4/",
-      "timestamp": 1792099107,
-      "file_name": "DGOQJk9SKL4_story.jpg"
-    },
     {
       "id": "Dft1gqDSyjm",
       "type": "video",
@@ -152,13 +144,6 @@
       "file_name": "Dfm4KxUMtgV_story.mp4"
     },
     {
-      "id": "DGOQJk9SKL4",
-      "type": "photo",
-      "source_url": "https://www.instagram.com/bakchod_nation/p/DGOQJk9SKL4/",
-      "timestamp": 1794903436,
-      "file_name": "DGOQJk9SKL4_story.jpg"
-    },
-    {
       "id": "Df1Va17SjkX",
       "type": "video",
       "source_url": "https://www.instagram.com/reel/Df1Va17SjkX/",
@@ -208,13 +193,6 @@
       "file_name": "DexEvM6vte2_story.jpg"
     },
     {
-      "id": "DGOQJk9SKL4",
-      "type": "photo",
-      "source_url": "https://www.instagram.com/bakchod_nation/p/DGOQJk9SKL4/",
-      "timestamp": 1794912151,
-      "file_name": "DGOQJk9SKL4_story.jpg"
-    },
-    {
       "id": "Df1r35xSMjg",
       "type": "video",
       "source_url": "https://www.instagram.com/reel/Df1r35xSMjg/",
@@ -250,11 +228,11 @@
       "file_name": "DeNw9c2Tz2i_story.mp4"
     },
     {
-      "id": "DfAXnEvGlTC",
-      "type": "photo",
-      "source_url": "https://www.instagram.com/p/DfAXnEvGlTC/",
-      "timestamp": 1794912431,
-      "file_name": "DfAXnEvGlTC_story.jpg"
+      "id": "Df0fWgej0pA",
+      "type": "video",
+      "source_url": "https://www.instagram.com/p/Df0fWgej0pA/",
+      "timestamp": 1794914268,
+      "file_name": "Df0fWgej0pA_story.mp4"
     }
   ]
 }
