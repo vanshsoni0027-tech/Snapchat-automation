@@ -100,43 +100,17 @@ def process_video_reel(input_path, output_path):
 
 def process_photo_meme(input_path, output_path):
     """
-    Formats photo/meme into 1080x1920 9:16 vertical canvas with aesthetic blurred background.
+    Optimizes photo/meme for Snapchat upload while preserving original aspect ratio.
     """
-    print(f"[*] Processing meme image: {input_path}")
+    print(f"[*] Processing photo: {input_path}")
     try:
         with Image.open(input_path) as img:
             img = img.convert("RGB")
-            orig_w, orig_h = img.size
-
-            # Create background canvas (1080x1920) with blurred zoomed version
-            bg_scale = max(TARGET_WIDTH / orig_w, TARGET_HEIGHT / orig_h)
-            bg_w = int(orig_w * bg_scale)
-            bg_h = int(orig_h * bg_scale)
-            bg_img = img.resize((bg_w, bg_h), Image.Resampling.LANCZOS)
-            
-            # Crop to exact 1080x1920
-            left = (bg_w - TARGET_WIDTH) // 2
-            top = (bg_h - TARGET_HEIGHT) // 2
-            bg_cropped = bg_img.crop((left, top, left + TARGET_WIDTH, top + TARGET_HEIGHT))
-            bg_blurred = bg_cropped.filter(ImageFilter.GaussianBlur(radius=25))
-
-            # Foreground sharp meme (scale to fit within 1080x1920 without cropping)
-            fg_scale = min(TARGET_WIDTH / orig_w, TARGET_HEIGHT / orig_h)
-            fg_w = int(orig_w * fg_scale)
-            fg_h = int(orig_h * fg_scale)
-            fg_img = img.resize((fg_w, fg_h), Image.Resampling.LANCZOS)
-
-            # Paste centered
-            paste_x = (TARGET_WIDTH - fg_w) // 2
-            paste_y = (TARGET_HEIGHT - fg_h) // 2
-            bg_blurred.paste(fg_img, (paste_x, paste_y))
-
-            bg_blurred.save(output_path, "JPEG", quality=95)
-            print(f"[+] Meme formatted to 9:16 vertical successfully: {output_path}")
+            img.save(output_path, "JPEG", quality=95)
+            print(f"[+] Photo optimized successfully: {output_path}")
             return output_path
-
     except Exception as e:
-        print(f"[!] Pillow image processing failed: {e}. Trying raw fallback...")
+        print(f"[!] Photo processing fallback: {e}")
         return input_path
 
 def adapt_media_for_snapchat(raw_path, post_info):

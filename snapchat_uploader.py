@@ -80,39 +80,30 @@ def schedule_single_snap(page, media_path, scheduled_dt=None, caption="🔥 #ree
     # 2. Wait for media rendering preview
     page.wait_for_timeout(6000)
 
-    # 3. Destination 1: Spotlight Checkbox
-    print("[*] Selecting Spotlight destination...")
+    # 3. Destination: Check Spotlight and Public Story
     spotlight_opt = page.locator('text="Post to Spotlight"')
-    if spotlight_opt.count() > 0:
+    if spotlight_opt.count() > 0 and spotlight_opt.first.is_visible():
+        print("[*] Selecting Spotlight destination...")
         spotlight_opt.first.click(force=True)
         page.wait_for_timeout(1000)
 
-    # In Spotlight: Select BC Nation in profile input
-    spotlight_select = page.locator('.sds-dropdown-input-selection-search-input').first
-    if spotlight_select.is_visible():
-        spotlight_select.click(force=True)
-        page.wait_for_timeout(400)
-        page.keyboard.press("ArrowDown")
-        page.wait_for_timeout(300)
-        page.keyboard.press("Enter")
-        page.wait_for_timeout(800)
-
-    # 4. Destination 2: Public Story Checkbox
-    print("[*] Selecting Public Story destination...")
     story_box = page.locator('text="Post to Public Story"')
-    if story_box.count() > 0:
+    if story_box.count() > 0 and story_box.first.is_visible():
+        print("[*] Selecting Public Story destination...")
         story_box.first.click(force=True)
-        page.wait_for_timeout(1200)
+        page.wait_for_timeout(1000)
 
-    # In Public Story: select second .sds-dropdown-input-selection-search-input
+    # 4. Select BC Nation in ALL visible dropdowns (whether 1 for photo or 2 for video)
     inputs = page.locator('.sds-dropdown-input-selection-search-input').all()
-    if len(inputs) >= 2:
-        inputs[1].click(force=True)
-        page.wait_for_timeout(400)
-        page.keyboard.press("ArrowDown")
-        page.wait_for_timeout(300)
-        page.keyboard.press("Enter")
-        page.wait_for_timeout(800)
+    for idx, inp in enumerate(inputs):
+        if inp.is_visible():
+            print(f"[*] Selecting BC Nation in profile input {idx + 1}...")
+            inp.click(force=True)
+            page.wait_for_timeout(400)
+            page.keyboard.press("ArrowDown")
+            page.wait_for_timeout(300)
+            page.keyboard.press("Enter")
+            page.wait_for_timeout(800)
 
     # 5. Fill caption/description if textarea exists
     try:
