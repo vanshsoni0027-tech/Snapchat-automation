@@ -2,12 +2,11 @@ name: Snapchat 3x Daily Automated Poster (Spotlight & Story)
 
 on:
   schedule:
-    # Run 1: ~10:05 AM IST (04:35 AM UTC) - offset from :30 to avoid queue lag
-    - cron: '35 4 * * *'
-    # Run 2: ~04:05 PM IST (10:35 AM UTC)
-    - cron: '35 10 * * *'
-    # Run 3: ~08:05 PM IST (02:35 PM UTC)
-    - cron: '35 14 * * *'
+    # Runs 3 times every day:
+    # 04:35 UTC (10:05 AM IST)
+    # 10:35 UTC (04:05 PM IST)
+    # 14:35 UTC (08:05 PM IST)
+    - cron: '35 4,10,14 * * *'
 
   workflow_dispatch:
     inputs:

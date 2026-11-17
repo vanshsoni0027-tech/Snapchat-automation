@@ -27,7 +27,7 @@ def extract_post_id(url):
 def scrape_account_posts(username, max_posts=15):
     """
     Live scrapes latest posts directly from an Instagram account in real-time.
-    No cached pool. Uses TLS Chrome impersonation (zero login).
+    Uses TLS Chrome impersonation (zero login).
     """
     profile_url = f"https://www.instagram.com/{username}/"
     posts = []
@@ -105,10 +105,39 @@ def scrape_account_posts(username, max_posts=15):
     return posts
 
 def download_media_file(post):
-    """Downloads reel or photo directly to disk using yt-dlp."""
+    """
+    Downloads reel or photo directly to disk.
+    - If photo: extracts high-res og:image via TLS and saves directly.
+    - If video: downloads highest resolution stream via yt-dlp.
+    """
     post_id = post["id"]
-    output_template = os.path.join(MEDIA_DIR, f"{post_id}_raw.%(ext)s")
+    media_type = post.get("type", "video")
 
+    # A. PHOTO DOWNLOAD HANDLER
+    if media_type == "photo":
+        print(f"[*] Downloading photo ({post_id}) from @{post.get('account', 'unknown')}...")
+        try:
+            if HAS_CURL_CFFI:
+                r = cffi_requests.get(post["url"], impersonate="chrome120", timeout=15)
+            else:
+                r = requests.get(post["url"], headers={"User-Agent": CHROME_USER_AGENT}, timeout=15)
+
+            if r.status_code == 200:
+                m = re.search(r'property="og:image"\s+content="([^"]+)"', r.text)
+                if m:
+                    img_url = m.group(1).replace("&amp;", "&")
+                    img_resp = (cffi_requests.get(img_url, timeout=15) if HAS_CURL_CFFI else requests.get(img_url, timeout=15))
+                    if img_resp.status_code == 200 and len(img_resp.content) > 1024:
+                        out_file = os.path.join(MEDIA_DIR, f"{post_id}_raw.jpg")
+                        with open(out_file, "wb") as f:
+                            f.write(img_resp.content)
+                        print(f"[+] Photo downloaded: {post_id} ({len(img_resp.content)} bytes)")
+                        return out_file
+        except Exception as e:
+            print(f"[!] Photo direct download exception for {post_id}: {e}")
+
+    # B. VIDEO DOWNLOAD HANDLER (yt-dlp)
+    output_template = os.path.join(MEDIA_DIR, f"{post_id}_raw.%(ext)s")
     ydl_opts = {
         'outtmpl': output_template,
         'format': 'bestvideo+bestaudio/best',
@@ -118,7 +147,7 @@ def download_media_file(post):
     }
 
     try:
-        print(f"[*] Downloading {post['type']} ({post_id}) from @{post.get('account', 'unknown')}...")
+        print(f"[*] Downloading video ({post_id}) from @{post.get('account', 'unknown')}...")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([post["url"]])
     except Exception as e:
@@ -133,7 +162,12 @@ def download_media_file(post):
             with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl:
                 ydl.download([post["url"]])
         except Exception as e2:
-            print(f"[!] Download failed for {post_id}: {e2}")
+            print(f"[!] Video download failed for {post_id}: {e2}")
+
+            # If yt-dlp failed because it was actually a photo post
+            if "no video" in str(e2).lower() or "no video" in str(e).lower():
+                post["type"] = "photo"
+                return download_media_file(post)
             return None
 
     for ext in ["mp4", "webm", "mkv", "jpg", "png", "webp"]:
@@ -145,7 +179,7 @@ def download_media_file(post):
 
 def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
     """
-    Pure 100% Live Scraper:
+    Downloads media files for a run.
     - Scrapes latest posts live across accounts.
     - GUARANTEE: The very LAST item in the returned list is ALWAYS from PINNED_LAST_ACCOUNT (@divine144empath).
     """
@@ -170,10 +204,9 @@ def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
                 cand["raw_file"] = raw
                 cand["is_recycled"] = False
                 pinned_final_item = cand
-                print(f"[+] [PINNED LAST] Secured final post: {cand['id']} from @{PINNED_LAST_ACCOUNT}")
+                print(f"[+] [PINNED LAST] Secured final post: {cand['id']} ({cand['type']}) from @{PINNED_LAST_ACCOUNT}")
                 break
 
-    # We need (target_count - 1) other posts if pinned post succeeded
     needed_other = (target_count - 1) if pinned_final_item else target_count
     downloaded_other = []
 
@@ -199,7 +232,7 @@ def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
                     downloaded_other.append(c_post)
                     print(f"[+] [7d-Recycled] Downloaded: {c_post['id']}")
 
-    # 3. Live scrape the other accounts (excluding pinned account to prevent duplicate in earlier slots)
+    # 3. Live scrape the other accounts
     other_accounts = [a for a in accounts if a != PINNED_LAST_ACCOUNT]
     account_candidates = {}
     for acc in other_accounts:
@@ -234,7 +267,7 @@ def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
             candidate["raw_file"] = file_path
             candidate["is_recycled"] = False
             downloaded_other.append(candidate)
-            print(f"[+] ({len(downloaded_other)}/{needed_other}) Live downloaded: {candidate['id']} (@{candidate.get('account')})")
+            print(f"[+] ({len(downloaded_other)}/{needed_other}) Downloaded: {candidate['id']} (@{candidate.get('account')})")
 
     # 4. Final Ordered List: [Other posts...] + [PINNED POST FROM divine144empath at the VERY END]
     final_batch = downloaded_other

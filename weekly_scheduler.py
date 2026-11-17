@@ -74,8 +74,8 @@ def run_pipeline():
     # 1. Gather Media (40% recycle if >7d old, 60% fresh)
     items = batch_download_unposted(accounts, target_count=target_count, repeat_ratio=0.4)
     if not items:
-        print("[-] No media items could be gathered for this run. Exiting.")
-        return False
+        print("[-] Error: No media items could be gathered for this run.")
+        sys.exit(1)
 
     # 2. Batch Media Processing (9:16 Vertical)
     print(f"\n[*] Formatting {len(items)} media files into 9:16 vertical canvas...")
@@ -94,8 +94,8 @@ def run_pipeline():
             print(f"[!] Processing exception for {item['id']}: {e}")
 
     if not processed_queue:
-        print("[-] No media files were successfully processed.")
-        return False
+        print("[-] Error: No media files were successfully processed.")
+        sys.exit(1)
 
     # 3. Post to Snapchat Spotlight & Public Story
     print(f"\n[*] Uploading {len(processed_queue)} posts to Snapchat...")
