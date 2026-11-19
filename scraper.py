@@ -150,9 +150,9 @@ def download_media_file(post):
         except Exception as e:
             print(f"[!] Photo direct download exception for {post_id}: {e}")
 
-    # B. VIDEO DOWNLOAD HANDLER (yt-dlp with cookies)
+    # B. VIDEO DOWNLOAD HANDLER (Resilient multi-tier: with cookies -> without cookies -> photo fallback)
     output_template = os.path.join(MEDIA_DIR, f"{post_id}_raw.%(ext)s")
-    ydl_opts = {
+    base_ydl_opts = {
         'outtmpl': output_template,
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'merge_output_format': 'mp4',
@@ -160,41 +160,42 @@ def download_media_file(post):
         'no_warnings': True,
         'overwrites': True,
     }
+
+    download_success = False
+
+    # Tier 1: Try with cookies (if available)
     if os.path.exists(COOKIE_FILE):
-        ydl_opts['cookiefile'] = COOKIE_FILE
-
-    try:
-        print(f"[*] Downloading video ({post_id}) from @{post.get('account', 'unknown')}...")
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([post["url"]])
-    except Exception as e:
         try:
-            ydl_opts_fallback = {
-                'outtmpl': output_template,
-                'format': 'best',
-                'quiet': True,
-                'no_warnings': True,
-                'overwrites': True,
-            }
-            if os.path.exists(COOKIE_FILE):
-                ydl_opts_fallback['cookiefile'] = COOKIE_FILE
-            with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl:
+            opts_cookies = dict(base_ydl_opts)
+            opts_cookies['cookiefile'] = COOKIE_FILE
+            print(f"[*] Downloading video ({post_id}) from @{post.get('account', 'unknown')} with cookies...")
+            with yt_dlp.YoutubeDL(opts_cookies) as ydl:
                 ydl.download([post["url"]])
-        except Exception as e2:
-            print(f"[!] Video download failed for {post_id}: {e2}")
+            download_success = True
+        except Exception as e_cook:
+            print(f"[!] Cookie video download failed for {post_id} ({e_cook}), retrying without cookies...")
 
-            # If yt-dlp says no video, try photo fallback
-            if "no video" in str(e2).lower() or "no video" in str(e).lower():
-                post["type"] = "photo"
-                return download_media_file(post)
-            return None
+    # Tier 2: Try without cookies (direct download)
+    if not download_success:
+        try:
+            print(f"[*] Downloading video ({post_id}) from @{post.get('account', 'unknown')} without cookies...")
+            with yt_dlp.YoutubeDL(base_ydl_opts) as ydl:
+                ydl.download([post["url"]])
+            download_success = True
+        except Exception as e_nocook:
+            print(f"[!] Direct video download without cookies failed for {post_id}: {e_nocook}")
 
-    for ext in ["mp4", "webm", "mkv", "jpg", "png", "webp"]:
+    # Check if video was downloaded
+    for ext in ["mp4", "webm", "mkv", "mov"]:
         candidate = os.path.join(MEDIA_DIR, f"{post_id}_raw.{ext}")
         if os.path.exists(candidate) and os.path.getsize(candidate) > 1024:
+            post["type"] = "video"
             return candidate
 
-    return None
+    # Tier 3: If no video file, post is a photo/carousel - fallback to uncropped photo download
+    print(f"[*] Video stream not found for {post_id}, falling back to uncropped photo download...")
+    post["type"] = "photo"
+    return download_media_file(post)
 
 def batch_download_unposted(accounts, target_count=7, **kwargs):
     """
