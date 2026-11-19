@@ -20,6 +20,8 @@ DEFAULT_TARGET_ACCOUNTS = [
     "bakchod_nation"
 ]
 
+PINNED_LAST_ACCOUNT = "divine144empath"
+
 # Media Formatting Standards
 ALLOWED_MEDIA_TYPES = ["video", "photo"]
 MAX_VIDEO_DURATION_SECONDS = 59

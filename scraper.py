@@ -14,12 +14,12 @@ except ImportError:
 import yt_dlp
 from config import (
     MEDIA_DIR,
-    COOKIE_FILE,
-    PINNED_LAST_ACCOUNT,
     ALLOWED_MEDIA_TYPES,
     DEFAULT_TARGET_ACCOUNTS
 )
 from history_manager import is_already_posted
+
+PINNED_LAST_ACCOUNT = "divine144empath"
 
 os.makedirs(MEDIA_DIR, exist_ok=True)
 
