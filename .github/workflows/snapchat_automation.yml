@@ -2,18 +2,12 @@ name: Snapchat 3x Daily Automated Poster (Spotlight & Story)
 
 on:
   schedule:
-    # Automated test triggers requested by user:
-    - cron: '52 7 * * *'  # 07:52 UTC (01:22 PM IST)
-    - cron: '55 7 * * *'  # 07:55 UTC (01:25 PM IST)
-    - cron: '58 7 * * *'  # 07:58 UTC (01:28 PM IST)
-    - cron: '2 8 * * *'   # 08:02 UTC (01:32 PM IST)
-    - cron: '6 8 * * *'   # 08:06 UTC (01:36 PM IST)
     # 3 Daily Scheduled Slots (Offset by 15 mins to absorb GitHub queue delay):
-    # Slot 1: ~10:00 AM IST (04:15 UTC) -> 7 posts
+    # Slot 1: 10:00 AM IST (04:15 UTC) -> 7 posts
     - cron: '15 4 * * *'
-    # Slot 2: ~04:00 PM IST (10:15 UTC) -> 7 posts
+    # Slot 2: 04:00 PM IST (10:15 UTC) -> 7 posts
     - cron: '15 10 * * *'
-    # Slot 3: ~08:00 PM IST (14:15 UTC) -> 6 posts
+    # Slot 3: 08:00 PM IST (14:15 UTC) -> 6 posts
     - cron: '15 14 * * *'
 
   workflow_dispatch:

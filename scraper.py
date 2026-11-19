@@ -90,10 +90,39 @@ def scrape_account_posts_with_page(page, username, max_posts=15):
 
     return posts
 
+def extract_uncropped_image_url(html_text):
+    """
+    Extracts the uncropped full-resolution original image from Instagram HTML.
+    Bypasses og:image square crop (stp=c...).
+    """
+    # 1. High-res candidate from image_versions2 JSON state (uncropped original)
+    matches = re.findall(r'"candidates":\s*\[\s*\{"url":\s*"([^"]+)"', html_text)
+    if matches:
+        for m in matches:
+            url = m.replace(r'\/', '/').replace(r'\u0026', '&').replace('&amp;', '&')
+            if 'stp=c' not in url:
+                return url
+
+    # 2. Search all CDN image URLs in HTML that do not have crop parameter 'stp=c'
+    all_urls = re.findall(r'https://[^"\'\s<>]+(?:cdninstagram|fbcdn)\.net[^"\'\s<>\\]+', html_text)
+    uncropped = []
+    for u in all_urls:
+        u = u.replace(r'\/', '/').replace(r'\u0026', '&').replace('&amp;', '&')
+        if ('.jpg' in u or '.webp' in u) and 'stp=c' not in u and 's150x150' not in u and 's320x320' not in u:
+            uncropped.append(u)
+    if uncropped:
+        return uncropped[0]
+
+    # 3. Fallback to og:image if no uncropped version found
+    m = re.search(r'property="og:image"\s+content="([^"]+)"', html_text)
+    if m:
+        return m.group(1).replace(r'\/', '/').replace(r'\u0026', '&').replace('&amp;', '&')
+    return None
+
 def download_media_file(post):
     """
     Downloads reel or photo directly to disk.
-    - If photo: extracts high-res og:image directly.
+    - If photo: extracts uncropped full-resolution image URL directly.
     - If video: downloads highest resolution stream via yt-dlp using cookies.
     """
     post_id = post["id"]
@@ -109,15 +138,14 @@ def download_media_file(post):
                 r = requests.get(post["url"], headers={"User-Agent": CHROME_USER_AGENT}, timeout=15)
 
             if r.status_code == 200:
-                m = re.search(r'property="og:image"\s+content="([^"]+)"', r.text)
-                if m:
-                    img_url = m.group(1).replace("&amp;", "&")
+                img_url = extract_uncropped_image_url(r.text)
+                if img_url:
                     img_resp = (cffi_requests.get(img_url, timeout=15) if HAS_CURL_CFFI else requests.get(img_url, timeout=15))
                     if img_resp.status_code == 200 and len(img_resp.content) > 1024:
                         out_file = os.path.join(MEDIA_DIR, f"{post_id}_raw.jpg")
                         with open(out_file, "wb") as f:
                             f.write(img_resp.content)
-                        print(f"[+] Photo downloaded: {post_id} ({len(img_resp.content)} bytes)")
+                        print(f"[+] Photo downloaded (Uncropped): {post_id} ({len(img_resp.content)} bytes)")
                         return out_file
         except Exception as e:
             print(f"[!] Photo direct download exception for {post_id}: {e}")
@@ -126,7 +154,8 @@ def download_media_file(post):
     output_template = os.path.join(MEDIA_DIR, f"{post_id}_raw.%(ext)s")
     ydl_opts = {
         'outtmpl': output_template,
-        'format': 'bestvideo+bestaudio/best',
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'merge_output_format': 'mp4',
         'quiet': True,
         'no_warnings': True,
         'overwrites': True,
