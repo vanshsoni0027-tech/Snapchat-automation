@@ -63,6 +63,13 @@ def scrape_account_posts_with_page(page, username, max_posts=15):
         page.goto(profile_url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(3500)
 
+        # Check if redirected to suspended or login
+        if "suspended" in page.url or "login" in page.url:
+            print(f"[!] Warning: Profile redirected to {page.url}. Clearing context cookies and retrying clean...")
+            page.context.clear_cookies()
+            page.goto(profile_url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3500)
+
         anchors = page.locator('article a, main a, a[href*="/p/"], a[href*="/reel/"]').all()
         seen_ids = set()
         for a in anchors:
@@ -222,9 +229,20 @@ def batch_download_unposted(accounts, target_count=7, **kwargs):
         pw_cookies = get_playwright_cookies()
         if pw_cookies:
             context.add_cookies(pw_cookies)
-            print(f"[+] Injected {len(pw_cookies)} authenticated Instagram session cookies into browser context")
+            print(f"[+] Injected {len(pw_cookies)} Instagram session cookies into browser context")
+            # Quick check: ensure cookies do not redirect to /accounts/suspended/
+            check_page = context.new_page()
+            try:
+                check_page.goto("https://www.instagram.com/", wait_until="domcontentloaded", timeout=15000)
+                if "suspended" in check_page.url:
+                    print(f"[!] Warning: Cookies redirect to suspended page ({check_page.url}). Clearing bad cookies...")
+                    context.clear_cookies()
+            except Exception:
+                pass
+            finally:
+                check_page.close()
         else:
-            print("[!] Warning: No instagram_cookies.txt found, attempting unauthenticated scrape")
+            print("[*] Running clean direct scraping without cookies")
 
         page = context.new_page()
 
