@@ -8,7 +8,6 @@ PROCESSED_DIR = os.path.join(BASE_DIR, "processed")
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 SESSION_FILE = os.path.join(BASE_DIR, "state.json")
 ACCOUNTS_FILE = os.path.join(BASE_DIR, "accounts.json")
-POOL_FILE = os.path.join(BASE_DIR, "discovered_pool.json")
 QUEUE_FILE = os.path.join(BASE_DIR, "schedule_queue.json")
 USER_DATA_DIR = os.getenv("USER_DATA_DIR", os.path.join(BASE_DIR, "snapchat_profile"))
 

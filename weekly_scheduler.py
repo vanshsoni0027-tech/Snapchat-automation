@@ -71,8 +71,8 @@ def run_pipeline():
     accounts = load_accounts()
     print(f"[*] Active Target Accounts ({len(accounts)}): {', '.join(accounts[:6])}... (+{len(accounts)-6} more)")
 
-    # 1. Gather Media (40% recycle if >7d old, 60% fresh, with multi-layer fallback)
-    items = batch_download_unposted(accounts, target_count=target_count, repeat_ratio=0.4)
+    # 1. Gather Media (100% Live Scraping from accounts.json, strict pinned last from divine144empath)
+    items = batch_download_unposted(accounts, target_count=target_count)
     if not items:
         print("[-] Error: No media items could be gathered for this run.")
         sys.exit(1)
