@@ -3,10 +3,10 @@ name: Snapchat 3x Daily Automated Poster (Spotlight & Story)
 on:
   schedule:
     # 5-minute automated test triggers requested by user:
-    - cron: '33 7 * * *'  # 07:33 UTC (~01:03 PM IST)
-    - cron: '35 7 * * *'  # 07:35 UTC (~01:05 PM IST)
-    - cron: '37 7 * * *'  # 07:37 UTC (~01:07 PM IST)
-    - cron: '40 7 * * *'  # 07:40 UTC (~01:10 PM IST)
+    - cron: '47 7 * * *'  # 07:47 UTC (~01:17 PM IST)
+    - cron: '50 7 * * *'  # 07:50 UTC (~01:20 PM IST)
+    - cron: '53 7 * * *'  # 07:53 UTC (~01:23 PM IST)
+    - cron: '56 7 * * *'  # 07:56 UTC (~01:26 PM IST)
     # 3 Daily Scheduled Slots (Offset by 15 mins to absorb GitHub queue delay):
     # Slot 1: ~10:00 AM IST (04:15 UTC) -> 7 posts
     - cron: '15 4 * * *'
@@ -56,13 +56,19 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium --with-deps
 
-      - name: Restore Snapchat Session
+      - name: Restore Snapchat & Instagram Sessions
         run: |
           if [ -f state.json ]; then
             echo "[+] Using existing state.json in repository"
           elif [ -n "${{ secrets.SNAPCHAT_STATE_JSON }}" ]; then
             echo "${{ secrets.SNAPCHAT_STATE_JSON }}" > state.json
             echo "[+] state.json restored from GitHub Secret"
+          fi
+          if [ -f instagram_cookies.txt ]; then
+            echo "[+] Using existing instagram_cookies.txt in repository"
+          elif [ -n "${{ secrets.INSTAGRAM_COOKIES }}" ]; then
+            echo "${{ secrets.INSTAGRAM_COOKIES }}" > instagram_cookies.txt
+            echo "[+] instagram_cookies.txt restored from GitHub Secret"
           fi
 
       - name: Run Auto Poster Pipeline
@@ -92,5 +98,5 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add history.json state.json discovered_pool.json || true
-          git diff --staged --quiet || (git commit -m "Auto Post: Updated history, session, and pool [skip ci]" && git push origin main) || echo "[i] No new changes to push"
+          git add history.json state.json instagram_cookies.txt || true
+          git diff --staged --quiet || (git commit -m "Auto Post: Updated history, session, and cookies [skip ci]" && git push origin main) || echo "[i] No new changes to push"
