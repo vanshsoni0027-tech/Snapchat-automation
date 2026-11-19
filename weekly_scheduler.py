@@ -29,34 +29,50 @@ def load_accounts():
 
 def get_target_count_for_current_run():
     """
-    Determines post count based on IST hour:
-    - 10:00 AM IST run (~04:30 UTC): 7 posts
-    - 04:00 PM IST run (~10:30 UTC): 7 posts
-    - 08:00 PM IST run (~14:30 UTC): 6 posts
-    Total: 20 posts per day!
+    Guarantees at least 7 posts per run as strictly requested by user.
     Can also be overridden by CLI arg: python weekly_scheduler.py 7
     """
     if len(sys.argv) > 1:
         try:
-            return int(sys.argv[1])
+            return max(7, int(sys.argv[1]))
         except ValueError:
             pass
 
-    # Check UTC hour to adjust (04 -> 7, 10 -> 7, 14 -> 6)
-    utc_hour = datetime.utcnow().hour
-    if 13 <= utc_hour <= 17:
-        return 6 # Evening slot (8:00 PM IST)
-    return 7 # Morning (10:00 AM IST) or Afternoon (4:00 PM IST)
+    return 7
+
+def check_recent_run_guard():
+    """
+    Prevents duplicate posting if another scheduled trigger already posted in the same window (last 45 mins).
+    Can be bypassed if manual CLI arg is provided.
+    """
+    if len(sys.argv) > 1:
+        return True
+
+    if os.path.exists("history.json"):
+        try:
+            with open("history.json", "r", encoding="utf-8") as f:
+                history = json.load(f)
+                items = history.get("items", [])
+                if items:
+                    last_ts = items[-1].get("timestamp", 0)
+                    diff = int(time.time()) - last_ts
+                    if diff < 2700: # 45 minutes
+                        print(f"[i] Slot already posted {diff}s ago (< 45 min). Skipping redundant fire.")
+                        sys.exit(0)
+        except Exception:
+            pass
+    return True
 
 def run_pipeline():
     """
     Automated Daily Poster:
     1. Loads target Instagram accounts.
-    2. Downloads posts (allowing 40% repeat from posts >= 7 days old).
-    3. Formats to 9:16 vertical (1080x1920) or clean high-res photo.
+    2. Downloads posts (100% Live Direct Mobile Clips API).
+    3. Guarantees 7+ uncropped posts with divine144empath pinned last.
     4. Auto-posts to Spotlight and Public Story ('BC Nation').
     5. Saves history and refreshes session state.
     """
+    check_recent_run_guard()
     target_count = get_target_count_for_current_run()
 
     print("\n" + "=" * 70)
