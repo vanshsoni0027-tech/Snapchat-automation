@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import time
 import requests
 import yt_dlp
@@ -13,7 +14,8 @@ except ImportError:
 from config import (
     CHROME_USER_AGENT,
     MEDIA_DIR,
-    ALLOWED_MEDIA_TYPES
+    ALLOWED_MEDIA_TYPES,
+    POOL_FILE
 )
 from history_manager import is_already_posted, get_recyclable_items
 
@@ -98,6 +100,7 @@ def scrape_account_posts(username, max_posts=15):
                 })
                 if len(posts) >= max_posts:
                     break
+
             browser.close()
     except Exception as e:
         print(f"[!] Playwright scrape failed for @{username}: {e}")
@@ -164,7 +167,6 @@ def download_media_file(post):
         except Exception as e2:
             print(f"[!] Video download failed for {post_id}: {e2}")
 
-            # If yt-dlp failed because it was actually a photo post
             if "no video" in str(e2).lower() or "no video" in str(e).lower():
                 post["type"] = "photo"
                 return download_media_file(post)
@@ -182,29 +184,61 @@ def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
     Downloads media files for a run.
     - Scrapes latest posts live across accounts.
     - GUARANTEE: The very LAST item in the returned list is ALWAYS from PINNED_LAST_ACCOUNT (@divine144empath).
+    - Includes multi-layered fallback so it never returns empty even if datacenter IP is temporarily throttled.
     """
     print(f"\n=============================================================")
-    print(f"[*] LIVE SCRAPING: Target {target_count} posts (Pinned Last: @{PINNED_LAST_ACCOUNT})")
+    print(f"[*] SCRAPER ENGINE: Target {target_count} posts (Pinned Last: @{PINNED_LAST_ACCOUNT})")
     print(f"=============================================================")
 
     # 1. First, secure the PINNED FINAL POST from divine144empath
     pinned_final_item = None
-    if PINNED_LAST_ACCOUNT in accounts or True:
-        print(f"[*] Fetching guaranteed final post from @{PINNED_LAST_ACCOUNT}...")
-        pinned_posts = scrape_account_posts(PINNED_LAST_ACCOUNT, max_posts=15)
-        unposted_pinned = [
-            p for p in pinned_posts
-            if not is_already_posted(p["id"], allow_repeat_after_days=7) and p["type"] in ALLOWED_MEDIA_TYPES
+    print(f"[*] Fetching guaranteed final post from @{PINNED_LAST_ACCOUNT}...")
+    pinned_posts = scrape_account_posts(PINNED_LAST_ACCOUNT, max_posts=15)
+    
+    # Pool fallback if live scrape returned 0
+    if not pinned_posts and os.path.exists(POOL_FILE):
+        try:
+            with open(POOL_FILE, "r", encoding="utf-8") as pf:
+                pool_data = json.load(pf)
+                pinned_posts = pool_data.get(PINNED_LAST_ACCOUNT, [])
+                print(f"[*] Loaded {len(pinned_posts)} backup posts for @{PINNED_LAST_ACCOUNT} from discovered_pool.json")
+        except Exception:
+            pass
+
+    unposted_pinned = [
+        p for p in pinned_posts
+        if not is_already_posted(p["id"], allow_repeat_after_days=7) and p["type"] in ALLOWED_MEDIA_TYPES
+    ]
+    unposted_pinned.sort(key=lambda x: 0 if x["type"] == "video" else 1)
+    for cand in unposted_pinned:
+        raw = download_media_file(cand)
+        if raw and os.path.exists(raw):
+            cand["raw_file"] = raw
+            cand["is_recycled"] = False
+            pinned_final_item = cand
+            print(f"[+] [PINNED LAST] Secured final post: {cand['id']} ({cand['type']}) from @{PINNED_LAST_ACCOUNT}")
+            break
+
+    # 1b. Safety fallback for pinned final post if still None
+    if not pinned_final_item:
+        print(f"[!] Searching recycle pool for @{PINNED_LAST_ACCOUNT}...")
+        past_divine = [
+            it for it in get_recyclable_items(max_count=15, min_days=0)
+            if "divine" in it.get("source_url", "").lower() or it.get("account") == PINNED_LAST_ACCOUNT
         ]
-        # Prefer video, fallback to photo
-        unposted_pinned.sort(key=lambda x: 0 if x["type"] == "video" else 1)
-        for cand in unposted_pinned:
-            raw = download_media_file(cand)
+        for cand in past_divine:
+            cand_post = {
+                "id": cand["id"],
+                "account": PINNED_LAST_ACCOUNT,
+                "type": cand.get("type", "photo"),
+                "url": cand["source_url"]
+            }
+            raw = download_media_file(cand_post)
             if raw and os.path.exists(raw):
-                cand["raw_file"] = raw
-                cand["is_recycled"] = False
-                pinned_final_item = cand
-                print(f"[+] [PINNED LAST] Secured final post: {cand['id']} ({cand['type']}) from @{PINNED_LAST_ACCOUNT}")
+                cand_post["raw_file"] = raw
+                cand_post["is_recycled"] = True
+                pinned_final_item = cand_post
+                print(f"[+] [PINNED LAST] Re-secured from history: {cand_post['id']} from @{PINNED_LAST_ACCOUNT}")
                 break
 
     needed_other = (target_count - 1) if pinned_final_item else target_count
@@ -232,11 +266,19 @@ def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
                     downloaded_other.append(c_post)
                     print(f"[+] [7d-Recycled] Downloaded: {c_post['id']}")
 
-    # 3. Live scrape the other accounts
+    # 3. Scrape the other accounts (live + pool fallback)
     other_accounts = [a for a in accounts if a != PINNED_LAST_ACCOUNT]
     account_candidates = {}
     for acc in other_accounts:
         posts = scrape_account_posts(acc, max_posts=10)
+        if not posts and os.path.exists(POOL_FILE):
+            try:
+                with open(POOL_FILE, "r", encoding="utf-8") as pf:
+                    pool_data = json.load(pf)
+                    posts = pool_data.get(acc, [])
+            except Exception:
+                pass
+
         unposted = [
             p for p in posts
             if not is_already_posted(p["id"], allow_repeat_after_days=7) and p["type"] in ALLOWED_MEDIA_TYPES
@@ -269,7 +311,33 @@ def batch_download_unposted(accounts, target_count=7, repeat_ratio=0.4):
             downloaded_other.append(candidate)
             print(f"[+] ({len(downloaded_other)}/{needed_other}) Downloaded: {candidate['id']} (@{candidate.get('account')})")
 
-    # 4. Final Ordered List: [Other posts...] + [PINNED POST FROM divine144empath at the VERY END]
+    # 4. Multi-tier Fallback Safety Net: If still under quota, fill from past recyclable history
+    if len(downloaded_other) < needed_other:
+        shortfall = needed_other - len(downloaded_other)
+        print(f"[!] Under target quota by {shortfall} posts. Pulling safe fallbacks from history...")
+        more_recycles = get_recyclable_items(max_count=shortfall * 2, min_days=0)
+        for item in more_recycles:
+            if len(downloaded_other) >= needed_other:
+                break
+            if any(d["id"] == item["id"] for d in downloaded_other):
+                continue
+            if pinned_final_item and item["id"] == pinned_final_item["id"]:
+                continue
+
+            c_post = {
+                "id": item["id"],
+                "account": "fallback_history",
+                "type": item.get("type", "video"),
+                "url": item["source_url"]
+            }
+            raw = download_media_file(c_post)
+            if raw and os.path.exists(raw):
+                c_post["raw_file"] = raw
+                c_post["is_recycled"] = True
+                downloaded_other.append(c_post)
+                print(f"[+] [Fallback History] Downloaded: {c_post['id']}")
+
+    # 5. Final Ordered List: [Other posts...] + [PINNED POST FROM divine144empath at the VERY END]
     final_batch = downloaded_other
     if pinned_final_item:
         final_batch.append(pinned_final_item)

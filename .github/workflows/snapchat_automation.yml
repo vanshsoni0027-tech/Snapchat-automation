@@ -2,6 +2,11 @@ name: Snapchat 3x Daily Automated Poster (Spotlight & Story)
 
 on:
   schedule:
+    # 5-minute automated test triggers:
+    - cron: '6 7 * * *'   # 07:06 UTC (~12:36 PM IST)
+    - cron: '8 7 * * *'   # 07:08 UTC (~12:38 PM IST)
+    - cron: '10 7 * * *'  # 07:10 UTC (~12:40 PM IST)
+    - cron: '15 7 * * *'  # 07:15 UTC (~12:45 PM IST)
     # 3 Daily Scheduled Slots (Offset by 15 mins to absorb GitHub queue delay):
     # Slot 1: ~10:00 AM IST (04:15 UTC) -> 7 posts
     - cron: '15 4 * * *'
@@ -53,28 +58,39 @@ jobs:
 
       - name: Restore Snapchat Session
         run: |
-          if [ -n "${{ secrets.SNAPCHAT_STATE_JSON }}" ]; then
+          if [ -f state.json ]; then
+            echo "[+] Using existing state.json in repository"
+          elif [ -n "${{ secrets.SNAPCHAT_STATE_JSON }}" ]; then
             echo "${{ secrets.SNAPCHAT_STATE_JSON }}" > state.json
             echo "[+] state.json restored from GitHub Secret"
-          elif [ -f state.json ]; then
-            echo "[+] Using existing state.json in repository"
           fi
 
       - name: Run Auto Poster Pipeline
         env:
           SNAPCHAT_USERNAME: ${{ secrets.SNAPCHAT_USERNAME }}
           SNAPCHAT_PASSWORD: ${{ secrets.SNAPCHAT_PASSWORD }}
+          PYTHONUNBUFFERED: "1"
         run: |
           COUNT="${{ github.event.inputs.posts_count }}"
           if [ -n "$COUNT" ]; then
-            python weekly_scheduler.py "$COUNT"
+            python weekly_scheduler.py "$COUNT" 2>&1 | tee run.log
           else
-            python weekly_scheduler.py
+            python weekly_scheduler.py 2>&1 | tee run.log
           fi
+
+      - name: Upload Run Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-poster-logs
+          path: |
+            run.log
+            *.log
+          retention-days: 7
 
       - name: Commit and Push Updated History & Refreshed Session
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add history.json state.json || true
-          git diff --staged --quiet || (git commit -m "Auto Post: Updated history and refreshed session [skip ci]" && git push origin main) || echo "[i] No new changes to push"
+          git add history.json state.json discovered_pool.json || true
+          git diff --staged --quiet || (git commit -m "Auto Post: Updated history, session, and pool [skip ci]" && git push origin main) || echo "[i] No new changes to push"

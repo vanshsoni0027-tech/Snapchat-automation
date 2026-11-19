@@ -53,7 +53,7 @@ def run_pipeline():
     Automated Daily Poster:
     1. Loads target Instagram accounts.
     2. Downloads posts (allowing 40% repeat from posts >= 7 days old).
-    3. Formats to 9:16 vertical (1080x1920) with blurred background.
+    3. Formats to 9:16 vertical (1080x1920) or clean high-res photo.
     4. Auto-posts to Spotlight and Public Story ('BC Nation').
     5. Saves history and refreshes session state.
     """
@@ -71,14 +71,14 @@ def run_pipeline():
     accounts = load_accounts()
     print(f"[*] Active Target Accounts ({len(accounts)}): {', '.join(accounts[:6])}... (+{len(accounts)-6} more)")
 
-    # 1. Gather Media (40% recycle if >7d old, 60% fresh)
+    # 1. Gather Media (40% recycle if >7d old, 60% fresh, with multi-layer fallback)
     items = batch_download_unposted(accounts, target_count=target_count, repeat_ratio=0.4)
     if not items:
         print("[-] Error: No media items could be gathered for this run.")
         sys.exit(1)
 
-    # 2. Batch Media Processing (9:16 Vertical)
-    print(f"\n[*] Formatting {len(items)} media files into 9:16 vertical canvas...")
+    # 2. Batch Media Processing
+    print(f"\n[*] Formatting {len(items)} media files...")
     processed_queue = []
     for idx, item in enumerate(items, 1):
         try:
@@ -106,13 +106,16 @@ def run_pipeline():
         try:
             for idx, item in enumerate(processed_queue, 1):
                 print(f"\n--- [{idx}/{len(processed_queue)}] Uploading {item['id']} ---")
-                success = schedule_single_snap(page, item["processed_file"])
-                if success:
-                    mark_as_posted(item["id"], item["type"], item["url"], item["processed_file"])
-                    success_count += 1
-                    print(f"[+] Post {item['id']} successfully published on Snapchat!")
-                else:
-                    print(f"[-] Could not publish {item['id']}.")
+                try:
+                    success = schedule_single_snap(page, item["processed_file"])
+                    if success:
+                        mark_as_posted(item["id"], item["type"], item["url"], item["processed_file"])
+                        success_count += 1
+                        print(f"[+] Post {item['id']} successfully published on Snapchat!")
+                    else:
+                        print(f"[-] Could not publish {item['id']}.")
+                except Exception as upload_err:
+                    print(f"[!] Upload exception for {item['id']}: {upload_err}")
 
                 # Clean up local temp files
                 try:
