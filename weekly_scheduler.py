@@ -42,7 +42,7 @@ def get_target_count_for_current_run():
 
 def check_recent_run_guard():
     """
-    Prevents duplicate posting if another scheduled trigger already posted in the same window (last 2.5 hours).
+    Prevents duplicate posting if another scheduled trigger already posted in the same pulse window (last 40 mins).
     Can be bypassed if manual CLI arg is provided.
     """
     if len(sys.argv) > 1:
@@ -56,8 +56,8 @@ def check_recent_run_guard():
                 if items:
                     last_ts = items[-1].get("timestamp", 0)
                     diff = int(time.time()) - last_ts
-                    if diff < 9000: # 2.5 hours (prevents multi-pulse duplicates while allowing next slot in 3+ hrs)
-                        print(f"[i] Slot already posted {diff}s ago (< 2.5 hours). Skipping redundant pulse.")
+                    if diff < 2400: # 40 minutes (guards against multi-pulse retries in same slot)
+                        print(f"[i] Slot already posted {diff}s ago (< 40 min). Skipping redundant pulse.")
                         sys.exit(0)
         except Exception:
             pass
