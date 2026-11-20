@@ -83,10 +83,21 @@ def fetch_account_clips(user_id, account_name, max_pages=2):
         try:
             resp = session.post(f"{MOBILE_API}/clips/user/", headers=MOBILE_HEADERS, data=data, timeout=20)
             if resp.status_code != 200:
-                break
+                print(f"[!] {account_name} ({user_id}) clips HTTP {resp.status_code}: {resp.text[:120]}")
+                # Try fallback with plain requests session
+                if HAS_CURL_CFFI:
+                    plain_resp = requests.post(f"{MOBILE_API}/clips/user/", headers=MOBILE_HEADERS, data=data, timeout=20)
+                    if plain_resp.status_code == 200:
+                        resp = plain_resp
+                    else:
+                        print(f"[!] {account_name} plain requests HTTP {plain_resp.status_code}: {plain_resp.text[:120]}")
+                        break
+                else:
+                    break
             j = resp.json()
             items = j.get("items", [])
             if not items:
+                print(f"[!] {account_name} returned 0 items from mobile API")
                 break
             for it in items:
                 media = it.get("media") or {}
@@ -113,6 +124,42 @@ def fetch_account_clips(user_id, account_name, max_pages=2):
             print(f"[!] Error fetching clips for {account_name} ({user_id}): {e}")
             break
     return clips
+
+def scrape_account_posts_playwright(account_name, max_posts=10):
+    """Fallback: Scrapes public reels and posts using headless Playwright."""
+    results = []
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+            page = context.new_page()
+            page.goto(f"https://www.instagram.com/{account_name}/", timeout=25000)
+            page.wait_for_timeout(3500)
+            anchors = page.locator('article a, main a, a[href*="/p/"], a[href*="/reel/"]').all()
+            seen = set()
+            for a in anchors:
+                href = a.get_attribute("href") or ""
+                m = re.search(r'/(?:p|reel)/([A-Za-z0-9_-]+)', href)
+                if m:
+                    cid = m.group(1)
+                    if cid not in seen:
+                        seen.add(cid)
+                        is_reel = "/reel/" in href
+                        results.append({
+                            "id": cid,
+                            "code": cid,
+                            "account": account_name,
+                            "url": f"https://www.instagram.com/{'reel' if is_reel else 'p'}/{cid}/",
+                            "video_url": None,
+                            "type": "video" if is_reel else "photo",
+                            "views": 0,
+                            "likes": 0
+                        })
+            browser.close()
+    except Exception as e:
+        print(f"[!] Playwright scraper notice for @{account_name}: {e}")
+    return results
 
 def download_media_file(post):
     """
@@ -214,6 +261,17 @@ def batch_download_unposted(accounts, target_count=7, **kwargs):
                 print(f"[+] [PINNED LAST SECURED] {cand['id']} ({cand['type']}) from @{PINNED_LAST_ACCOUNT}")
                 break
 
+    if not pinned_final_item:
+        print(f"[*] Trying Playwright fallback for @{PINNED_LAST_ACCOUNT}...")
+        pw_divine = scrape_account_posts_playwright(PINNED_LAST_ACCOUNT)
+        for cand in [c for c in pw_divine if not is_already_posted(c["id"])]:
+            raw_file = download_media_file(cand)
+            if raw_file and os.path.exists(raw_file):
+                cand["raw_file"] = raw_file
+                pinned_final_item = cand
+                print(f"[+] [PINNED LAST SECURED via Playwright] {cand['id']} ({cand['type']}) from @{PINNED_LAST_ACCOUNT}")
+                break
+
     # 2. Gather candidates from other target accounts
     other_accounts = [a for a in accounts if a.lower() != PINNED_LAST_ACCOUNT.lower()]
     random.shuffle(other_accounts)
@@ -247,6 +305,22 @@ def batch_download_unposted(accounts, target_count=7, **kwargs):
             candidate["raw_file"] = file_path
             downloaded_other.append(candidate)
             print(f"[+] ({len(downloaded_other)}/{needed_other}) Live Media Ready: {candidate['id']} [{candidate['type']}] from @{candidate['account']}")
+
+    # 3b. Fallback: If mobile API didn't yield enough candidates, scrape via Playwright
+    if len(downloaded_other) < needed_other:
+        print(f"[*] Need {needed_other - len(downloaded_other)} more items. Running Playwright web fallback...")
+        for acc in other_accounts:
+            if len(downloaded_other) >= needed_other:
+                break
+            pw_items = scrape_account_posts_playwright(acc)
+            for cand in [c for c in pw_items if not is_already_posted(c["id"])]:
+                if len(downloaded_other) >= needed_other:
+                    break
+                file_path = download_media_file(cand)
+                if file_path and os.path.exists(file_path):
+                    cand["raw_file"] = file_path
+                    downloaded_other.append(cand)
+                    print(f"[+] ({len(downloaded_other)}/{needed_other}) Live Media Ready (Playwright): {cand['id']} [{cand['type']}] from @{cand['account']}")
 
     # 4. Assemble Final Batch
     final_batch = downloaded_other
