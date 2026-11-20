@@ -2,16 +2,21 @@ name: Snapchat 3x Daily Automated Poster (Spotlight & Story)
 
 on:
   schedule:
-    # 3 Daily Posting Windows (Optimized with odd non-round minutes to bypass GitHub queue congestion):
-    # Slot 1 (Morning ~10:18 AM IST):
-    - cron: '48 4 * * *'   # 04:48 UTC (Primary)
-    - cron: '3 5 * * *'    # 05:03 UTC (Backup)
-    # Slot 2 (Afternoon ~04:18 PM IST):
-    - cron: '48 10 * * *'  # 10:48 UTC (Primary)
-    - cron: '3 11 * * *'   # 11:03 UTC (Backup)
-    # Slot 3 (Night ~08:18 PM IST):
-    - cron: '48 14 * * *'  # 14:48 UTC (Primary)
-    - cron: '3 15 * * *'   # 15:03 UTC (Backup)
+    # 3 Daily High-Engagement Windows with 3x Pulse Redundancy (Zero Skips, Zero Congestion):
+    # Slot 1: Morning Window (10:47 AM - 11:27 AM IST / 05:17 - 05:57 UTC)
+    - cron: '17 5 * * *'   # 10:47 AM IST (Pulse 1)
+    - cron: '37 5 * * *'   # 11:07 AM IST (Pulse 2)
+    - cron: '57 5 * * *'   # 11:27 AM IST (Pulse 3)
+
+    # Slot 2: Afternoon Window (04:47 PM - 05:27 PM IST / 11:17 - 11:57 UTC)
+    - cron: '17 11 * * *'  # 04:47 PM IST (Pulse 1)
+    - cron: '37 11 * * *'  # 05:07 PM IST (Pulse 2)
+    - cron: '57 11 * * *'  # 05:27 PM IST (Pulse 3)
+
+    # Slot 3: Night Prime Window (08:47 PM - 09:27 PM IST / 15:17 - 15:57 UTC)
+    - cron: '17 15 * * *'  # 08:47 PM IST (Pulse 1)
+    - cron: '37 15 * * *'  # 09:07 PM IST (Pulse 2)
+    - cron: '57 15 * * *'  # 09:27 PM IST (Pulse 3)
 
   workflow_dispatch:
     inputs:
