@@ -285,7 +285,7 @@
       "value": "f2a93cd6-e7a1-441f-be61-aff7cbf94a1a",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1826891413,
+      "expires": 1826908691,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
@@ -495,7 +495,7 @@
       "value": "GA1.2.153721779.1795071207",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795441812,
+      "expires": 1795459090,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -581,46 +581,6 @@
       "sameSite": "None"
     },
     {
-      "name": "sc_ads_web_session",
-      "value": "fde21134-547e-4255-8ef6-f6ea13b97d72",
-      "domain": ".snapchat.com",
-      "path": "/",
-      "expires": 1795357212,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
-    },
-    {
-      "name": "_sc-sid",
-      "value": "99695069-6e7a-44e3-978f-aed4467f3fba",
-      "domain": ".snapchat.com",
-      "path": "/",
-      "expires": 1795357214,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "Lax"
-    },
-    {
-      "name": "NID",
-      "value": "CuQBCAESlgEBM9Agl1v8PVqjXnG5sQ0x3i3VK9OPcJb4K-_zibjdVOMyxK3xgx_iLM_-aqcDOpfbgZgfb49xHfcWSueiyu8DJ4EqFUEAFF-6GHWYLDvEtE9ri3BWt-ev96Mi4o_gb7WVp6uEQA0ELJNiPbrJomxUgnp37W1sKxXW6QtogQxF6bvpLu0weWKKQO73MhH55R7fc4ISHkMoATJFAXBKQs97EPKcLVa6_BUuN4mfNb0De3jGUYHhSg0Ntu5LzhoqGag4M4PYAC514KF5_mMWzTWzOpDpNzNuU4WatWCAaQID",
-      "domain": ".google.com",
-      "path": "/",
-      "expires": 1811079066.241455,
-      "httpOnly": true,
-      "secure": true,
-      "sameSite": "None"
-    },
-    {
-      "name": "blizzard_web_session_id",
-      "value": "mGtT0dyMOAipZhBZ",
-      "domain": ".snapchat.com",
-      "path": "/",
-      "expires": 1795357215,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
-    },
-    {
       "name": "_gcl_au",
       "value": "1.1.1695448013.1794658160.446732909.1795355037.1795355036.1198884978.1795355037.1795355036",
       "domain": ".snapchat.com",
@@ -661,18 +621,6 @@
       "sameSite": "None"
     },
     {
-      "name": "__cf_bm",
-      "value": "eZ2B8ZCvK.75YI0YP8Pg6ItYNyVprPjicrV1jbijXSk-1795355036.7776694-1.0.1.1-8ORprFPs0k6IwjK2RVk2wMs6AZYKs9xY_5OHa7oscpKyOU09t0M91vAdByDieGxml9N6au.zedZAvhlUgAo7LTneaAiTL4i6.5e97teMEEnQERvxP2tmAeM6LDLkyIQP",
-      "domain": ".linkedin.com",
-      "path": "/",
-      "expires": 1795356836.845825,
-      "httpOnly": true,
-      "secure": true,
-      "sameSite": "None",
-      "partitionKey": "https://snapchat.com",
-      "_crHasCrossSiteAncestor": true
-    },
-    {
       "name": "_uetsid",
       "value": "ecd95770e3e511f198604db446eb1972",
       "domain": ".snapchat.com",
@@ -703,31 +651,71 @@
       "sameSite": "None"
     },
     {
-      "name": "_ga",
-      "value": "GA1.1.1416700279.1794658159",
+      "name": "sc_ads_web_session",
+      "value": "8ab7ed49-840f-4f23-8652-edd611f52481",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1829915412.704052,
+      "expires": 1795374490,
       "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga",
+      "value": "GA1.2.1416700279.1794658159",
+      "domain": ".snapchat.com",
+      "path": "/",
+      "expires": 1829932690.667126,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_sc-sid",
+      "value": "6dbc27b9-d4ae-4060-899f-0e14c5f3e8b7",
+      "domain": ".snapchat.com",
+      "path": "/",
+      "expires": 1795374493,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "NID",
+      "value": "CuQBCAESlgEBM9Agl4JlDyhvoXBpy0wtf7-g1iAgsA6qNc-1b8zTt2H6Zso9Rav9wIIH8eDn_k7rGV1GOdPpbEf8fZ1uOSjgkOh6amp1trv5auF6Xyf3a1hcMm8dkSQwvizQOWhtMnzpfiCALOCO6Q_XmZFcwtxTjdv4VEYqEl0z9cQlUr86R3_r1eE27BGGwokqUGJbmZ0UTUbxJJYoATJFAXBKQs86qD3POENoA62bCSn6o_DpSzOjiOwAjUSpXl_xE6rK9tUKp0Gk892vcIIuSYOW00P8sSthe1ZYIziDgHr0rQQJ",
+      "domain": ".google.com",
+      "path": "/",
+      "expires": 1811183515.041006,
+      "httpOnly": true,
       "secure": true,
       "sameSite": "None"
     },
     {
-      "name": "_scid_r",
-      "value": "2HfGlkFFMONiZYkhILc4IQYMgi8necLJ669FAg",
+      "name": "blizzard_web_session_id",
+      "value": "rD+xJSJdz+BseI07",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1829483413,
+      "expires": 1795374494,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_scid_r",
+      "value": "33fGlkFFMONiZYkhILc4IQYMgi8necLJ669FCQ",
+      "domain": ".snapchat.com",
+      "path": "/",
+      "expires": 1829500691,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "g_state",
-      "value": "{\"i_l\":0,\"i_ll\":1795355415376,\"i_b\":\"AgatcztzoJrzH/IXjro5zevO7U42Z+96mPyW5rnVgNM\",\"i_e\":{\"enable_itp_optimization\":24},\"i_et\":1795355415376}",
+      "value": "{\"i_l\":0,\"i_ll\":1795372693553,\"i_b\":\"QS8pGaYJEjCwVi7JPzCiAOket+bkzcyBETWarrFTpVY\",\"i_e\":{\"enable_itp_optimization\":24},\"i_et\":1795372693553}",
       "domain": "accounts.snapchat.com",
       "path": "/",
-      "expires": 1810907415,
+      "expires": 1810924693,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -739,7 +727,7 @@
       "localStorage": [
         {
           "name": "u_sclid_r",
-          "value": "37u6wHtEecwCAFYRvMVyT8tPdll2z316d72PyNh3xpZBRTDjYmWJISC3OCEGDIIvJ3nCyeuvRQI"
+          "value": "17u6wHtEecwCAFYRvMVyT8tPdll2z316d72P3993xpZBRTDjYmWJISC3OCEGDIIvJ3nCyeuvRQk"
         },
         {
           "name": "u_sclid",
@@ -788,7 +776,7 @@
         },
         {
           "name": "__paypal_storage__",
-          "value": "{\"id\":\"uid_3b8ba620a6_mti6mdk6mtg\",\"__paypal_session__\":{\"guid\":\"uid_29413e3745_mtm6ndy6mda\",\"created\":1795355160558}}"
+          "value": "{\"id\":\"uid_3b8ba620a6_mti6mdk6mtg\",\"__paypal_session__\":{\"guid\":\"uid_984097fe89_mtg6mzc6mdc\",\"created\":1795372627009}}"
         },
         {
           "name": "lastUsedProfile",
