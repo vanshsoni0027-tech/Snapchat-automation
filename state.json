@@ -285,7 +285,7 @@
       "value": "f2a93cd6-e7a1-441f-be61-aff7cbf94a1a",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1826908691,
+      "expires": 1826909651,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
@@ -495,7 +495,7 @@
       "value": "GA1.2.153721779.1795071207",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795459090,
+      "expires": 1795460051,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -641,31 +641,11 @@
       "sameSite": "Lax"
     },
     {
-      "name": "_ga_BG6KLX0DBH",
-      "value": "GS2.1.s1795354481$o19$g1$t1795355412$j60$l0$h0",
-      "domain": ".snapchat.com",
-      "path": "/",
-      "expires": 1829915412.702535,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "None"
-    },
-    {
       "name": "sc_ads_web_session",
       "value": "8ab7ed49-840f-4f23-8652-edd611f52481",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795374490,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
-    },
-    {
-      "name": "_ga",
-      "value": "GA1.2.1416700279.1794658159",
-      "domain": ".snapchat.com",
-      "path": "/",
-      "expires": 1829932690.667126,
+      "expires": 1795375451,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -675,7 +655,7 @@
       "value": "6dbc27b9-d4ae-4060-899f-0e14c5f3e8b7",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795374493,
+      "expires": 1795375453,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
@@ -695,27 +675,47 @@
       "value": "rD+xJSJdz+BseI07",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795374494,
+      "expires": 1795375454,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_ga_BG6KLX0DBH",
+      "value": "GS2.1.s1795373275$o20$g0$t1795373275$j60$l0$h0",
+      "domain": ".snapchat.com",
+      "path": "/",
+      "expires": 1829933275.303654,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_ga",
+      "value": "GA1.2.1416700279.1794658159",
+      "domain": ".snapchat.com",
+      "path": "/",
+      "expires": 1829933651.329518,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "_scid_r",
-      "value": "33fGlkFFMONiZYkhILc4IQYMgi8necLJ669FCQ",
+      "value": "13fGlkFFMONiZYkhILc4IQYMgi8necLJ669FEA",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1829500691,
+      "expires": 1829501652,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "g_state",
-      "value": "{\"i_l\":0,\"i_ll\":1795372693553,\"i_b\":\"QS8pGaYJEjCwVi7JPzCiAOket+bkzcyBETWarrFTpVY\",\"i_e\":{\"enable_itp_optimization\":24},\"i_et\":1795372693553}",
+      "value": "{\"i_l\":0,\"i_ll\":1795373654311,\"i_b\":\"QS8pGaYJEjCwVi7JPzCiAOket+bkzcyBETWarrFTpVY\",\"i_e\":{\"enable_itp_optimization\":24},\"i_et\":1795373654311}",
       "domain": "accounts.snapchat.com",
       "path": "/",
-      "expires": 1810924693,
+      "expires": 1810925654,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -727,7 +727,7 @@
       "localStorage": [
         {
           "name": "u_sclid_r",
-          "value": "17u6wHtEecwCAFYRvMVyT8tPdll2z316d72P3993xpZBRTDjYmWJISC3OCEGDIIvJ3nCyeuvRQk"
+          "value": "3ru6wHtEecwCAFYRvMVyT8tPdll2z316d72P1td3xpZBRTDjYmWJISC3OCEGDIIvJ3nCyeuvRRA"
         },
         {
           "name": "u_sclid",
@@ -776,7 +776,7 @@
         },
         {
           "name": "__paypal_storage__",
-          "value": "{\"id\":\"uid_3b8ba620a6_mti6mdk6mtg\",\"__paypal_session__\":{\"guid\":\"uid_984097fe89_mtg6mzc6mdc\",\"created\":1795372627009}}"
+          "value": "{\"id\":\"uid_3b8ba620a6_mti6mdk6mtg\",\"__paypal_session__\":{\"guid\":\"uid_0127fca4d5_mtg6ntm6mdc\",\"created\":1795373587774}}"
         },
         {
           "name": "lastUsedProfile",
