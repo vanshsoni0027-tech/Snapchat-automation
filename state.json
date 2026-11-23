@@ -285,7 +285,7 @@
       "value": "f2a93cd6-e7a1-441f-be61-aff7cbf94a1a",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1826986358,
+      "expires": 1826987456,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
@@ -495,7 +495,7 @@
       "value": "GA1.2.153721779.1795071207",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795536757,
+      "expires": 1795537855,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -605,7 +605,7 @@
       "value": "d423467b-ba20-456c-8624-cbf4d78836bd",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795452157,
+      "expires": 1795453255,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -645,7 +645,7 @@
       "value": "0938d6ec-ef9a-4548-963b-dc57de229d0d",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795452159,
+      "expires": 1795453258,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
@@ -665,47 +665,47 @@
       "value": "Gfi7IvEkj0b6rIYf",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1795452160,
+      "expires": 1795453259,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "_ga_BG6KLX0DBH",
-      "value": "GS2.1.s1795449981$o22$g1$t1795450357$j60$l0$h0",
+      "value": "GS2.1.s1795449981$o22$g1$t1795451079$j60$l0$h0",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1830010357.916837,
+      "expires": 1830011079.754476,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
     },
     {
       "name": "_ga",
-      "value": "GA1.1.1416700279.1794658159",
+      "value": "GA1.2.1416700279.1794658159",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1830010357.919359,
+      "expires": 1830011455.831019,
       "httpOnly": false,
-      "secure": true,
-      "sameSite": "None"
+      "secure": false,
+      "sameSite": "Lax"
     },
     {
       "name": "_scid_r",
-      "value": "5XfGlkFFMONiZYkhILc4IQYMgi8necLJ669FLQ",
+      "value": "3XfGlkFFMONiZYkhILc4IQYMgi8necLJ669FNA",
       "domain": ".snapchat.com",
       "path": "/",
-      "expires": 1829578358,
+      "expires": 1829579456,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "g_state",
-      "value": "{\"i_l\":0,\"i_ll\":1795450360525,\"i_b\":\"S/563thjmwdNNC/nhajSTGARhxR+bDvvM7lL33n2aaA\",\"i_e\":{\"enable_itp_optimization\":24},\"i_et\":1795450360525}",
+      "value": "{\"i_l\":0,\"i_ll\":1795451458791,\"i_b\":\"S/563thjmwdNNC/nhajSTGARhxR+bDvvM7lL33n2aaA\",\"i_e\":{\"enable_itp_optimization\":24},\"i_et\":1795451458791}",
       "domain": "accounts.snapchat.com",
       "path": "/",
-      "expires": 1811002360,
+      "expires": 1811003458,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -717,7 +717,7 @@
       "localStorage": [
         {
           "name": "u_sclid_r",
-          "value": "2ru6wHtEecwCAFYRvMVyT8tPdll2z316d72P8OV3xpZBRTDjYmWJISC3OCEGDIIvJ3nCyeuvRS0"
+          "value": "0bu6wHtEecwCAFYRvMVyT8tPdll2z316d72P9913xpZBRTDjYmWJISC3OCEGDIIvJ3nCyeuvRTQ"
         },
         {
           "name": "u_sclid",
@@ -766,7 +766,7 @@
         },
         {
           "name": "__paypal_storage__",
-          "value": "{\"id\":\"uid_3b8ba620a6_mti6mdk6mtg\",\"__paypal_session__\":{\"guid\":\"uid_47120ff733_mty6mte6mzm\",\"created\":1795450293989}}"
+          "value": "{\"id\":\"uid_3b8ba620a6_mti6mdk6mtg\",\"__paypal_session__\":{\"guid\":\"uid_daf230ce41_mty6mjk6nti\",\"created\":1795451392211}}"
         },
         {
           "name": "lastUsedProfile",
