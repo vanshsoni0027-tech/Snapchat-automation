@@ -23,3 +23,8 @@ ENV/
 .DS_Store
 Thumbs.db
 *_debug.png
+
+trigger_dispatch.ps1
+*.png
+*.txt
+

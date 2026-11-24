@@ -16,7 +16,7 @@ def check_session_exists():
     return False
 
 def ensure_logged_in(page, context):
-    """Checks if logged in; if at login screen, logs in automatically."""
+    """Checks if logged in; if at login screen, logs in automatically with credentials."""
     for _ in range(8):
         current_url = page.url.lower()
         if "accounts.snapchat.com" in current_url or "login" in current_url:
@@ -27,13 +27,13 @@ def ensure_logged_in(page, context):
 
     current_url = page.url.lower()
     if "accounts.snapchat.com" in current_url or "login" in current_url:
-        print("[*] Login page detected. Performing automated authentication...")
+        print("[*] Login page detected. Performing automated authentication with credentials...")
         try:
-            user_input = page.locator('input#accountIdentifier, input[name="accountIdentifier"], input[autocomplete="username"]').first
+            user_input = page.locator('input#username, input#accountIdentifier, input[name="accountIdentifier"], input[autocomplete="username"]').first
             user_input.wait_for(state="visible", timeout=15000)
             user_input.fill(SNAPCHAT_USERNAME)
-            page.wait_for_timeout(500)
-            next_btn = page.locator('button:has-text("Next"), button[type="submit"]').first
+            page.wait_for_timeout(600)
+            next_btn = page.locator('button[type="submit"], button:has-text("Next")').first
             if next_btn.is_visible():
                 next_btn.click()
                 page.wait_for_timeout(3000)
@@ -41,11 +41,15 @@ def ensure_logged_in(page, context):
             pw_input = page.locator('input#password, input[name="password"], input[type="password"]').first
             pw_input.wait_for(state="visible", timeout=15000)
             pw_input.fill(SNAPCHAT_PASSWORD)
-            page.wait_for_timeout(500)
-            sub_btn = page.locator('button:has-text("Log In"), button:has-text("Next"), button[type="submit"]').first
+            page.wait_for_timeout(600)
+            sub_btn = page.locator('button[type="submit"], button:has-text("Log In"), button:has-text("Next")').first
             if sub_btn.is_visible():
                 sub_btn.click()
-                page.wait_for_timeout(10000)
+                page.wait_for_timeout(8000)
+
+            # Navigate back to creator portal after login
+            page.goto("https://my.snapchat.com/", wait_until="domcontentloaded", timeout=40000)
+            page.wait_for_timeout(4000)
 
             if os.path.exists(SESSION_FILE):
                 try:
