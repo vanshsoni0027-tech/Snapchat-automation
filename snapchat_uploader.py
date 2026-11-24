@@ -4,8 +4,8 @@ import time
 from playwright.sync_api import sync_playwright
 from config import SESSION_FILE, USER_DATA_DIR
 
-SNAPCHAT_USERNAME = os.environ.get("SNAPCHAT_USERNAME", "bakchod_nationn")
-SNAPCHAT_PASSWORD = os.environ.get("SNAPCHAT_PASSWORD", "8003402780")
+SNAPCHAT_USERNAME = os.environ.get("SNAPCHAT_USERNAME") or "bakchod_nationn"
+SNAPCHAT_PASSWORD = os.environ.get("SNAPCHAT_PASSWORD") or "8003402780"
 
 def check_session_exists():
     """Verifies if state.json or persistent profile is present."""
@@ -27,21 +27,21 @@ def ensure_logged_in(page, context):
 
     current_url = page.url.lower()
     if "accounts.snapchat.com" in current_url or "login" in current_url:
-        print("[*] Login page detected. Performing automated authentication with credentials...")
+        print(f"[*] Login page detected. Performing automated authentication for user: {SNAPCHAT_USERNAME}...")
         try:
             user_input = page.locator('input#username, input#accountIdentifier, input[name="accountIdentifier"], input[autocomplete="username"]').first
-            user_input.wait_for(state="visible", timeout=15000)
+            user_input.wait_for(state="visible", timeout=20000)
             user_input.fill(SNAPCHAT_USERNAME)
-            page.wait_for_timeout(600)
+            page.wait_for_timeout(800)
             next_btn = page.locator('button[type="submit"], button:has-text("Next")').first
             if next_btn.is_visible():
                 next_btn.click()
-                page.wait_for_timeout(3000)
+                page.wait_for_timeout(4000)
 
             pw_input = page.locator('input#password, input[name="password"], input[type="password"]').first
-            pw_input.wait_for(state="visible", timeout=15000)
+            pw_input.wait_for(state="visible", timeout=20000)
             pw_input.fill(SNAPCHAT_PASSWORD)
-            page.wait_for_timeout(600)
+            page.wait_for_timeout(800)
             sub_btn = page.locator('button[type="submit"], button:has-text("Log In"), button:has-text("Next")').first
             if sub_btn.is_visible():
                 sub_btn.click()
@@ -49,7 +49,7 @@ def ensure_logged_in(page, context):
 
             # Navigate back to creator portal after login
             page.goto("https://my.snapchat.com/", wait_until="domcontentloaded", timeout=40000)
-            page.wait_for_timeout(4000)
+            page.wait_for_timeout(5000)
 
             if os.path.exists(SESSION_FILE):
                 try:

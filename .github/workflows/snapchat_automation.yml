@@ -2,21 +2,13 @@ name: Snapchat 3x Daily Automated Poster (Spotlight & Story)
 
 on:
   schedule:
-    # 3 Daily High-Engagement Windows with 3x Pulse Redundancy (Zero Skips, Zero Congestion):
-    # Slot 1: Morning Window (10:47 AM - 11:27 AM IST / 05:17 - 05:57 UTC)
-    - cron: '17 5 * * *'   # 10:47 AM IST (Pulse 1)
-    - cron: '37 5 * * *'   # 11:07 AM IST (Pulse 2)
-    - cron: '57 5 * * *'   # 11:27 AM IST (Pulse 3)
-
-    # Slot 2: Afternoon Window (04:47 PM - 05:27 PM IST / 11:17 - 11:57 UTC)
-    - cron: '17 11 * * *'  # 04:47 PM IST (Pulse 1)
-    - cron: '37 11 * * *'  # 05:07 PM IST (Pulse 2)
-    - cron: '57 11 * * *'  # 05:27 PM IST (Pulse 3)
-
-    # Slot 3: Night Prime Window (08:47 PM - 09:27 PM IST / 15:17 - 15:57 UTC)
-    - cron: '17 15 * * *'  # 08:47 PM IST (Pulse 1)
-    - cron: '37 15 * * *'  # 09:07 PM IST (Pulse 2)
-    - cron: '57 15 * * *'  # 09:27 PM IST (Pulse 3)
+    # 3 Daily Scheduled Slots (UTC = IST - 5:30):
+    # Slot 1: Morning 10:47 AM IST (05:17 UTC)
+    - cron: '17 5 * * *'
+    # Slot 2: Afternoon 04:47 PM IST (11:17 UTC)
+    - cron: '17 11 * * *'
+    # Slot 3: Night 08:47 PM IST (15:17 UTC)
+    - cron: '17 15 * * *'
 
   workflow_dispatch:
     inputs:
@@ -76,8 +68,8 @@ jobs:
 
       - name: Run Auto Poster Pipeline
         env:
-          SNAPCHAT_USERNAME: ${{ secrets.SNAPCHAT_USERNAME }}
-          SNAPCHAT_PASSWORD: ${{ secrets.SNAPCHAT_PASSWORD }}
+          SNAPCHAT_USERNAME: ${{ secrets.SNAPCHAT_USERNAME || 'bakchod_nationn' }}
+          SNAPCHAT_PASSWORD: ${{ secrets.SNAPCHAT_PASSWORD || '8003402780' }}
           PYTHONUNBUFFERED: "1"
         run: |
           COUNT="${{ github.event.inputs.posts_count }}"
@@ -98,6 +90,7 @@ jobs:
           retention-days: 7
 
       - name: Commit and Push Updated History & Refreshed Session
+        if: success()
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"

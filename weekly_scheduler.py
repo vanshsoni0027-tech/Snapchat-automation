@@ -144,12 +144,15 @@ def run_pipeline():
 
                 time.sleep(5)
 
-            # Auto-save refreshed session state
-            try:
-                context.storage_state(path=SESSION_FILE)
-                print(f"[+] Session refreshed and saved to {SESSION_FILE}")
-            except Exception:
-                pass
+            # Auto-save refreshed session state ONLY if uploads succeeded
+            if success_count > 0:
+                try:
+                    context.storage_state(path=SESSION_FILE)
+                    print(f"[+] Session refreshed and saved to {SESSION_FILE}")
+                except Exception as e:
+                    print(f"[!] Warning: Could not save storage state: {e}")
+            else:
+                print("[-] Warning: 0 posts published; skipping session save to protect valid session cookies.")
 
         finally:
             if browser:
@@ -160,6 +163,9 @@ def run_pipeline():
     print("\n" + "=" * 70)
     print(f" RUN COMPLETE: {success_count}/{len(processed_queue)} posts published!")
     print("=" * 70)
+    if success_count == 0:
+        print("[-] Pipeline failed: 0 posts published.")
+        sys.exit(1)
     return True
 
 if __name__ == "__main__":
