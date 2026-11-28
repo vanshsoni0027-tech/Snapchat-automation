@@ -122,19 +122,25 @@ def schedule_single_snap(page, media_path, scheduled_dt=None, caption="🔥 #ree
             story_box.first.click(force=True)
             page.wait_for_timeout(1000)
 
-    # 4. Select BC Nation in ALL visible profile dropdowns
-    inputs = page.locator('.sds-dropdown-input-selection-search-input').all()
-    for idx, inp in enumerate(inputs):
+    # 4. Disable 'Save to a Public Profile' if present
+    save_profile = page.locator('text="Save to a Public Profile"')
+    if save_profile.count() > 0 and save_profile.is_visible():
+        save_profile.first.click(force=True)
+        page.wait_for_timeout(600)
+
+    # 5. Select BC Nation in visible profile dropdowns
+    search_inputs = page.locator('input.sds-dropdown-input-selection-search-input').all()
+    for idx, inp in enumerate(search_inputs):
         if inp.is_visible():
             print(f"[*] Selecting BC Nation in profile input {idx + 1}...")
             inp.click(force=True)
-            page.wait_for_timeout(400)
-            page.keyboard.press("ArrowDown")
-            page.wait_for_timeout(300)
-            page.keyboard.press("Enter")
-            page.wait_for_timeout(800)
+            page.wait_for_timeout(600)
+            bc_item = page.locator('text="BC Nation"').last
+            if bc_item.count() > 0 and bc_item.is_visible():
+                bc_item.click(force=True)
+                page.wait_for_timeout(800)
 
-    # 5. Fill caption/description if textarea exists (mainly for video)
+    # 6. Fill caption/description if textarea exists (mainly for video)
     try:
         desc = page.locator('textarea').first
         if desc.is_visible():
@@ -142,12 +148,6 @@ def schedule_single_snap(page, media_path, scheduled_dt=None, caption="🔥 #ree
             page.wait_for_timeout(400)
     except Exception:
         pass
-
-    # 6. Disable 'Save to a Public Profile' if present
-    save_profile = page.locator('text="Save to a Public Profile"')
-    if save_profile.count() > 0 and save_profile.is_visible():
-        save_profile.first.click(force=True)
-        page.wait_for_timeout(600)
 
     # 7. Apply Schedule if scheduled_dt is provided
     if scheduled_dt:
@@ -172,18 +172,22 @@ def schedule_single_snap(page, media_path, scheduled_dt=None, caption="🔥 #ree
         
         # Check for success confirmation modal
         confirmed = False
-        for _ in range(15):
+        for _ in range(25):
             page.wait_for_timeout(1000)
-            success_modal = page.locator('text="Success! Your Snap is now live!", text="Your Snap is now live!"')
+            success_modal = page.locator('text="Success! Your Snap is now live!", text="Success! Your Snap is processing", text="Success! Your post is now live!", text="Your Snap is now live!", text="Your Snap is processing"')
             if success_modal.count() > 0 and success_modal.first.is_visible():
                 confirmed = True
-                print("[+] Verified: 'Success! Your Snap is now live!' modal appeared!")
+                print("[+] Verified: Success confirmation modal appeared!")
                 break
             error_toast = page.locator('[role="alert"], .sds-toast--negative')
             if error_toast.count() > 0 and error_toast.first.is_visible():
                 err_text = error_toast.first.text_content().strip()
                 print(f"[!] Upload Error Toast: {err_text}")
                 return False
+
+        if not confirmed:
+            print("[-] Error: Upload was submitted but success confirmation modal did not appear.")
+            return False
 
         return True
     else:
